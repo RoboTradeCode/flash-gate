@@ -2,6 +2,7 @@ import asyncio
 import itertools
 from asyncio import get_running_loop
 import ccxtpro
+from bidict import bidict
 from .aliases import BaseExchange, CreatedOrder, CreatingOrder
 
 
@@ -19,6 +20,8 @@ class Exchange:
         }
 
         self.exchange = exchange_cls(exchange_config)
+        self.orders = bidict()
+
         self.exchange.check_required_credentials()
 
     async def __aenter__(self):

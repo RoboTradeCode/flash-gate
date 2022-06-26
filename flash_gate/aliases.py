@@ -6,7 +6,7 @@ BaseExchange = Type[Exchange]
 
 
 class CreatedOrder(TypedDict):
-    id: str
+    client_order_id: str
     symbol: str
 
 

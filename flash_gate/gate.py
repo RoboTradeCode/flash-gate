@@ -6,7 +6,7 @@ from .core import Core
 from .enums import Event, Action
 from .exchange import Exchange
 from .formatters import Formatter
-from .aliases import CreatingOrder
+from .aliases import CreatingOrder, CreatedOrder
 
 
 class Gate:
@@ -82,7 +82,7 @@ class Gate:
         message = await self.formatter.format(orders, Event.DATA, Action.CREATE_ORDERS)
         await self.core.offer(message)
 
-    async def _cancel_orders(self, orders):
+    async def _cancel_orders(self, orders: list[CreatedOrder]):
         # [
         #     {
         #         "client_order_id": "9e743ffa-eb10-11ec-8fea-0242ac120002",
@@ -99,18 +99,26 @@ class Gate:
         message = await self.formatter.format(orders, Event.DATA, action)
         await self.core.offer(message)
 
-    async def _get_orders(self, order):
+    async def _get_orders(self, orders: list[CreatedOrder]):
         # [
         #     {
         #         "client_order_id": "9e743ffa-eb10-11ec-8fea-0242ac120002",
         #         "symbol": "XRP/USDT"
         #     }
         # ]
+        tasks = [self._get_order(order) for order in orders]
+        await asyncio.gather(*tasks)
+
+    async def _get_order(self, order: CreatedOrder):
+        # {
+        #     "client_order_id": "9e743ffa-eb10-11ec-8fea-0242ac120002",
+        #     "symbol": "XRP/USDT"
+        # }
         order = await self.exchange.fetch_order(order)
         message = await self.formatter.format(order, Event.DATA, Action.GET_ORDERS)
         await self.core.offer(message)
 
-    async def _get_balance(self, parts):
+    async def _get_balance(self, parts: list[str]):
         # [
         #     "BTC",
         #     "ETH",
@@ -121,8 +129,11 @@ class Gate:
         #
         # ]
         balance = await self.exchange.fetch_balance()
-        default_balance = {"free": 0.0, "used": 0.0, "total": 0.0}
-        balance = {part: balance.get(part, default_balance) for part in parts}
+
+        if parts:
+            default_balance = {"free": 0.0, "used": 0.0, "total": 0.0}
+            balance = {part: balance.get(part, default_balance) for part in parts}
+
         message = await self.formatter.format(balance, Event.DATA, Action.GET_BALANCE)
         await self.core.offer(message)
 
