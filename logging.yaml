@@ -16,7 +16,11 @@ handlers:
     # в написании кода
     maxBytes: 2560000
     backupCount: 5
+loggers:
+  simple:
+    level: DEBUG
 root:
+  level: DEBUG
   handlers:
     - console
     - file

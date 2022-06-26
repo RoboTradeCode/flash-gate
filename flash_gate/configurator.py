@@ -5,7 +5,7 @@ from aiohttp import ClientSession
 
 class Configurator:
     def __init__(self, config: ConfigParser):
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger("simple")
         self.session = ClientSession(config.get("configurator", "base_url"))
         self.exchange_id = config.get("configurator", "exchange_id")
         self.instance = config.get("configurator", "instance")
@@ -20,7 +20,7 @@ class Configurator:
         # Возвращать полную конфигурацию
         params = {"only_new": "false"}
 
-        self.logger.info("Trying to get config: %s", self._method)
+        self.logger.info("Trying to get config: %s", await self._method)
         async with self.session.get(await self._method, params=params) as response:
             config = await response.json()
 

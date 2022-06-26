@@ -15,7 +15,7 @@ class Gate:
         markets: list = config["data"]["markets"]
         gate_config = config["data"]["configs"]["gate_config"]
 
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger("simple")
         self.exchange = Exchange(config)
         self.core = Core(config, self._event_handler)
         self.formatter = Formatter(config)
@@ -177,8 +177,8 @@ class Gate:
 
     async def _ping(self):
         while True:
-            message = self.formatter.format(self.data, Event.DATA, Action.PING)
             # TODO: Send to log server
+            message = await self.formatter.format(self.data, Event.DATA, Action.PING)
             await asyncio.sleep(self.ping_delay)
 
     async def _poll(self):

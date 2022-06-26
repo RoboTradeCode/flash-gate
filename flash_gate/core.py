@@ -12,7 +12,7 @@ class Core:
         subscribers: dict = aeron_config["subscribers"]
         publishers: dict = aeron_config["publishers"]
 
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger("simple")
         self.subscriber = Subscriber(handler, **subscribers["core"])
         self.orderbooks = Publisher(**publishers["orderbooks"])
         self.balances = Publisher(**publishers["balances"])

@@ -21,18 +21,18 @@ class Formatter:
         # Форматирование данных
         match action:
             case Action.ORDER_BOOK_UPDATE:
-                formatted["data"] = self._format_order_book(data)
+                formatted["data"] = await self._format_order_book(data)
             case Action.GET_BALANCE | Action.BALANCE_UPDATE:
-                formatted["data"] = self._format_balance(data)
+                formatted["data"] = await self._format_balance(data)
             case Action.CREATE_ORDERS | Action.GET_ORDERS | Action.ORDERS_UPDATE:
-                formatted["data"] = self._format_orders(data)
+                formatted["data"] = await self._format_orders(data)
 
         return formatted
 
     @property
     async def _template(self):
         return {
-            "event_id": uuid.uuid1(),
+            "event_id": str(uuid.uuid1()),
             "node": self.node,
             "exchange": self.exchange,
             "instance": self.instance,

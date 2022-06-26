@@ -1,20 +1,20 @@
-from enum import StrEnum
+from enum import Enum
 
 
-class Event(StrEnum):
+class Event(str, Enum):
     COMMAND = "command"
     DATA = "data"
     ERROR = "error"
 
 
-class Node(StrEnum):
+class Node(str, Enum):
     CONFIGURATOR = "configurator"
     CORE = "core"
     GATE = "gate"
     AGENT = "agent"
 
 
-class Action(StrEnum):
+class Action(str, Enum):
     GET_BALANCE = "get_balance"
     CREATE_ORDERS = "create_orders"
     CANCEL_ORDERS = "cancel_orders"

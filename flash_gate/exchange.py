@@ -12,9 +12,9 @@ class Exchange:
         exchange_id: str = gate_config["info"]["exchange"]
         exchange_cls: BaseExchange = getattr(ccxtpro, exchange_id)
         exchange_config = {
-            "apiKey": gate_config["api_key"],
-            "secret": gate_config["secret_key"],
-            "password": gate_config["password"],
+            "apiKey": gate_config["account"]["api_key"],
+            "secret": gate_config["account"]["secret_key"],
+            "password": gate_config["account"]["password"],
             "asyncio_loop": get_running_loop(),
             "enableRateLimit": gate_config["rate_limits"]["enable_ccxt_rate_limiter"],
         }
