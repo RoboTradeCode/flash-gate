@@ -16,3 +16,4 @@ class CreatingOrder(TypedDict):
     side: str
     price: float
     amount: float
+    client_order_id: str

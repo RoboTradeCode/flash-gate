@@ -65,13 +65,15 @@ class Exchange:
         raise NotImplementedError
 
     async def create_order(self, order: CreatingOrder):
-        return await self.exchange.create_order(
-            order["symbol"],
-            order["type"],
-            order["side"],
-            order["amount"],
-            order["price"],
-        )
+        if self.exchange.has.get("createOrder"):
+            return await self.exchange.create_order(
+                order["symbol"],
+                order["type"],
+                order["side"],
+                order["amount"],
+                order["price"],
+            )
+        raise NotImplementedError
 
     async def create_orders(self, orders: list[CreatingOrder]):
         tasks = [self.create_order(order) for order in orders]
