@@ -1,0 +1,22 @@
+version: 1
+formatters:
+  default:
+    # Формат журналирования IntelliJ IDEA
+    format: '%(asctime)s [%(process)d] %(levelname)s - %(name)s - %(message)s'
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: default
+    stream: ext://sys.stdout
+  file:
+    class: logging.handlers.RotatingFileHandler
+    formatter: default
+    filename: log/flash-gate.log
+    # Максимальный размер файла, для которого IntelliJ IDEA предоставляет помощь
+    # в написании кода
+    maxBytes: 2560000
+    backupCount: 5
+root:
+  handlers:
+    - console
+    - file

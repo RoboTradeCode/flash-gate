@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 from aeron.concurrent import AsyncSleepingIdleStrategy
-from .core import Core
 from .exchange import Exchange
 from .formatter import Formatter
 from .logging_handlers import AeronHandler

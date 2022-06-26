@@ -1,26 +1,29 @@
 import asyncio
 import logging.config
 from configparser import ConfigParser
-from gate import Gate, Configurator
+import yaml
+from flash_gate import Configurator, Gate
 
-LOGGING_FNAME = "logging.conf"
-CONFIG_FILENAME = "config.ini"
+LOGGING_FNAME = "logging.yaml"  # Конфигурация модуля ведения журнала
+CONFIG_FILENAME = "config.ini"  # Начальная конфигурация
 
 
 async def main():
-    logging.config.fileConfig(LOGGING_FNAME)
-    initial_config = ConfigParser()
-    initial_config.read(CONFIG_FILENAME)
+    # Настройка модуля ведения журнала
+    with open(LOGGING_FNAME) as f:
+        d = yaml.safe_load(f)
+        logging.config.dictConfig(d)
 
-    base_url = initial_config.get("configurator", "base_url")
-    exchange = initial_config.get("configurator", "exchange")
-    instance = initial_config.get("configurator", "instance")
-    sandbox_mode = initial_config.getboolean("gate", "sandbox_mode")
+    # Получение начальной конфигурации
+    ini = ConfigParser()
+    ini.read(CONFIG_FILENAME)
 
-    async with Configurator(base_url, exchange, instance) as configurator:
+    # Получение основной конфигурации
+    async with Configurator(ini) as configurator:
         config = await configurator.get_config()
 
-    async with Gate(config, sandbox_mode) as gate:
+    # Запуск шлюза
+    async with Gate(config) as gate:
         await gate.run()
 
 

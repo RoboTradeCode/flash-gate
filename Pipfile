@@ -7,6 +7,7 @@ name = "pypi"
 aeron = {git = "ssh://git@github.com/RoboTradeCode/aeron-python.git"}
 aiohttp = "*"
 ccxtpro = {subdirectory = "python", git = "ssh://git@github.com/kroitor/ccxt.pro.git"}
+pyyaml = "*"
 
 [dev-packages]
 pytest = "*"
