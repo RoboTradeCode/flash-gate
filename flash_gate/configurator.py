@@ -21,14 +21,14 @@ class Configurator:
         params = {"only_new": "false"}
 
         self.logger.info("Trying to get config: %s", self._method)
-        async with self.session.get(self._method, params=params) as response:
+        async with self.session.get(await self._method, params=params) as response:
             config = await response.json()
 
         self.logger.info("Received config: %s", config)
         return config
 
     @property
-    def _method(self):
+    async def _method(self):
         return f"/{self.exchange_id}/{self.instance}"
 
     async def close(self):

@@ -18,7 +18,7 @@
     "default": {
         "aeron": {
             "git": "ssh://git@github.com/RoboTradeCode/aeron-python.git",
-            "ref": "26b732eebb07084a4cc8a0d6e386a0e96afbc972"
+            "ref": "b274d093cfdd992053d21ba5e6111744887aee01"
         },
         "aiodns": {
             "hashes": [
@@ -131,14 +131,14 @@
         },
         "ccxt": {
             "hashes": [
-                "sha256:5a995138bbc6ec7eeb19676b562aa61f4ec1f15d55426b343a9633548b4ee296",
-                "sha256:70c31c81e50e093700e8c741b192220d4fe21a54b7e0a713784013f2be35be2d"
+                "sha256:196fa74f27c9e3b1a9522b1f9a03469fd317b6d8d91347ea89f999d51e631f47",
+                "sha256:8fa0d88b51b17fc55f0254c4038dee5357847de4a439c8312c9c7a9ac65a941a"
             ],
-            "version": "==1.88.95"
+            "version": "==1.89.5"
         },
         "ccxtpro": {
             "git": "ssh://git@github.com/kroitor/ccxt.pro.git",
-            "ref": "42f472bc7a9bd4c570a26e0a884bd53009081875",
+            "ref": "3046da996c650f63f13013a42f9b7c11afd1b1e3",
             "subdirectory": "python"
         },
         "certifi": {

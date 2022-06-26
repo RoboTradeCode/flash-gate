@@ -2,41 +2,29 @@ import asyncio
 import json
 import logging
 from aeron.concurrent import AsyncSleepingIdleStrategy
-from .exchange import Exchange
-from .formatter import Formatter
-from .logging_handlers import AeronHandler
-
-IDLE_SLEEP_MS = 1
+from flash_gate.exchange import Exchange
+from .formatters import Formatter
+from .core import Core
+from .enums import Event, Action
 
 
 class Gate:
-    def __init__(self, config: dict, sandbox_mode: bool = False):
+    def __init__(self, config: dict):
         assets: list = config["data"]["assets_labels"]
         markets: list = config["data"]["markets"]
         gate_config = config["data"]["configs"]["gate_config"]
-        aeron_handler = AeronHandler(**gate_config["aeron"]["publishers"]["logs"])
 
+        self.logger = logging.getLogger(__name__)
+        self.exchange = Exchange(config)
+        self.core = Core(config, self._event_handler)
         self.formatter = Formatter(config)
-        self.core = Core(gate_config["aeron"], self._core_handler)
-        self.idle_strategy = AsyncSleepingIdleStrategy(IDLE_SLEEP_MS)
-        self.logger = logging.getLogger("aeron")
-        self.logger.addHandler(aeron_handler)
+        self.idle_strategy = AsyncSleepingIdleStrategy(1)
 
         self.assets: list[str] = [asset["common"] for asset in assets]
         self.symbols: list[str] = [market["common_symbol"] for market in markets]
         self.depth: int = gate_config["info"]["depth"]
-        self.data = 0
         self.ping_delay = gate_config["info"]["ping_delay"]
-
         self.subscribe_timeout = gate_config["rate_limits"]["subscribe_timeout"]
-
-        self.exchange = Exchange(
-            gate_config["info"]["exchange"],
-            self.symbols,
-            sandbox_mode,
-            gate_config["rate_limits"]["enable_ccxt_rate_limiter"],
-            **gate_config["account"]
-        )
 
     async def __aenter__(self):
         return self
@@ -44,52 +32,44 @@ class Gate:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
 
-    def _core_handler(self, message: str):
+    async def run(self):
+        tasks = [
+            self._poll(),
+            self._watch_order_books(),
+            self._watch_balance(),
+            self._watch_orders(),
+            self._ping(),
+        ]
+        await asyncio.gather(*tasks)
+
+    def _event_handler(self, message: str):
         try:
-            logging.info("Received message from core: %s", message)
-            message = json.loads(message)
+            event = json.loads(message)
+            self.logger.info("Received message from Core: %s", event)
 
-            log_message = dict(message)
-            log_message["node"] = "gate"
-            self.logger.info(json.dumps(log_message))
+            # TODO: Log Server
+            # log_message = dict(message)
+            # log_message["node"] = "gate"
+            # self.logger.info(json.dumps(log_message))
 
-            match message:
-                case {"event": "command", "action": "create_order"}:
-                    logging.info("Creating orders: %s", message["data"])
-                    task = self.create_orders(message["data"])
-
-                case {"event": "command", "action": "cancel_order"}:
-                    logging.info("Cancelling order: %s", message["data"])
-                    task = self.cancel_orders(message["data"])
-
-                case {"event": "command", "action": "cancel_all_orders"}:
-                    logging.info("Cancelling all orders")
-                    task = self.cancel_all_orders()
-
-                case {"event": "command", "action": "order_status"}:
-                    logging.info("Getting order status: %s", message["data"])
-                    task = self._order_status(message["data"])
-
-                case {"event": "command", "action": "get_balances"}:
-                    logging.info("Getting balances: %s", message["data"]["assets"])
-                    task = self._get_balances(message["data"]["assets"])
-
+            match event["event"], event["action"]:
+                case Event.COMMAND, Action.CREATE_ORDERS:
+                    asyncio.create_task(self._create_orders(event["data"]))
+                case Event.COMMAND, Action.CANCEL_ORDERS:
+                    asyncio.create_task(self._cancel_orders(event["data"]))
+                case Event.COMMAND, Action.CANCEL_ALL_ORDERS:
+                    asyncio.create_task(self._cancel_all_orders())
+                case Event.COMMAND, Action.GET_ORDERS:
+                    asyncio.create_task(self._get_orders(event["data"]))
+                case Event.COMMAND, Action.GET_BALANCE:
+                    asyncio.create_task(self._get_balance(event["data"]))
                 case _:
-                    logging.warning("Unknown message type: %s", message)
-                    task = None
+                    logging.warning("Unknown event type: %s", event)
 
-            if task is not None:
-                asyncio.create_task(task)
+        except (json.JSONDecodeError, KeyError) as e:
+            self.logger.error("Error in event parsing: %s", str(e))
 
-        except Exception as e:
-            logging.error("Error in processing core command: %s", e)
-
-    async def _poll(self):
-        while True:
-            fragments_read = self.core.poll()
-            await self.idle_strategy.idle(fragments_read)
-
-    async def create_orders(self, orders):
+    async def _create_orders(self, orders):
         orders = await self.exchange.create_orders(orders)
         logging.info("Received orders from exchange: %s", orders)
 
@@ -108,7 +88,7 @@ class Gate:
 
             self.core.offer(message)
 
-    async def cancel_orders(self, orders):
+    async def _cancel_orders(self, orders):
         orders = await self.exchange.cancel_orders(orders)
         logging.info("Received orders from exchange: %s", orders)
 
@@ -127,7 +107,7 @@ class Gate:
 
             self.core.offer(message)
 
-    async def cancel_all_orders(self):
+    async def _cancel_all_orders(self):
         orders = await self.exchange.cancel_all_orders()
         logging.info("Received orders from exchange: %s", orders)
 
@@ -220,15 +200,10 @@ class Gate:
             self.logger.info(json.dumps(message))
             await asyncio.sleep(self.ping_delay)
 
-    async def run(self):
-        tasks = [
-            self._poll(),
-            self._watch_order_books(),
-            self._watch_balance(),
-            self._watch_orders(),
-            self._ping(),
-        ]
-        await asyncio.gather(*tasks)
+    async def _poll(self):
+        while True:
+            fragments_read = await self.core.poll()
+            await self.idle_strategy.idle(fragments_read)
 
     async def close(self):
         await self.exchange.close()
