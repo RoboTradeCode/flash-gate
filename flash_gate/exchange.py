@@ -20,7 +20,7 @@ class Exchange:
         }
 
         self.exchange = exchange_cls(exchange_config)
-        self.orders = bidict()
+        self.orders = bidict()  # id by client_order_id
 
         self.exchange.check_required_credentials()
 
@@ -52,7 +52,10 @@ class Exchange:
 
     async def fetch_order(self, order: CreatedOrder):
         if self.exchange.has.get("fetchOrder"):
-            return await self.exchange.fetch_order(order["id"], order["symbol"])
+            order_id = self.orders[order["client_order_id"]]
+            opened = await self.exchange.fetch_order(order_id, order["symbol"])
+            opened["client_order_id"] = order["client_order_id"]
+            return opened
         raise NotImplementedError
 
     async def fetch_orders(self, symbols: list[str]):
@@ -64,18 +67,22 @@ class Exchange:
 
     async def watch_orders(self):
         if self.exchange.has.get("watchOrders"):
-            return await self.exchange.watch_orders()
+            order = await self.exchange.watch_orders()
+            order["client_order_id"] = self.orders.inverse[order["id"]]
+            return order
         raise NotImplementedError
 
     async def create_order(self, order: CreatingOrder):
         if self.exchange.has.get("createOrder"):
-            return await self.exchange.create_order(
+            created = await self.exchange.create_order(
                 order["symbol"],
                 order["type"],
                 order["side"],
                 order["amount"],
                 order["price"],
             )
+            self.orders[order["client_order_id"]] = created["id"]
+            return created
         raise NotImplementedError
 
     async def create_orders(self, orders: list[CreatingOrder]):
@@ -83,7 +90,8 @@ class Exchange:
         return await asyncio.gather(*tasks)
 
     async def cancel_order(self, order: CreatedOrder):
-        return await self.exchange.cancel_order(order["id"], order["symbol"])
+        order_id = self.orders[order["client_order_id"]]
+        return await self.exchange.cancel_order(order_id, order["symbol"])
 
     async def cancel_orders(self, orders: list[CreatedOrder]):
         tasks = [self.cancel_order(order) for order in orders]

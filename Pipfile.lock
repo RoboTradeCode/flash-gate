@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "1c9d682b594190f6e762a58600bc48ec4dee1c1f5d9b691e13728e7a65949c98"
+            "sha256": "3ecbdf24c59fdbf3d5a0dc5c58c71edc5502552951f25da9c732dafbae97c7a8"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -129,12 +129,20 @@
             "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'",
             "version": "==21.4.0"
         },
+        "bidict": {
+            "hashes": [
+                "sha256:415126d23a0c81e1a8c584a8fb1f6905ea090c772571803aeee0a2242e8e7ba0",
+                "sha256:5c826b3e15e97cc6e615de295756847c282a79b79c5430d3bfc909b1ac9f5bd8"
+            ],
+            "index": "pypi",
+            "version": "==0.22.0"
+        },
         "ccxt": {
             "hashes": [
-                "sha256:196fa74f27c9e3b1a9522b1f9a03469fd317b6d8d91347ea89f999d51e631f47",
-                "sha256:8fa0d88b51b17fc55f0254c4038dee5357847de4a439c8312c9c7a9ac65a941a"
+                "sha256:7b31cfea70ed75565b1fcf0a01e5e0f049f08c0ada4be5f4986e57e8d99eec57",
+                "sha256:f0c6ff9ef329d72205aa0133c4d012a58d245a349b036ad0f6dce6943861024d"
             ],
-            "version": "==1.89.5"
+            "version": "==1.89.13"
         },
         "ccxtpro": {
             "git": "ssh://git@github.com/kroitor/ccxt.pro.git",
@@ -209,7 +217,7 @@
                 "sha256:2857e29ff0d34db842cd7ca3230549d1a697f96ee6d3fb071cfa6c7393832597",
                 "sha256:6881edbebdb17b39b4eaaa821b438bf6eddffb4468cf344f09f89def34a8b1df"
             ],
-            "markers": "python_version >= '3.5'",
+            "markers": "python_full_version >= '3.5.0'",
             "version": "==2.0.12"
         },
         "cryptography": {
@@ -310,7 +318,7 @@
                 "sha256:84d9dd047ffa80596e0f246e2eab0b391788b0503584e8945f2368256d2735ff",
                 "sha256:9d643ff0a55b762d5cdb124b8eaa99c66322e2157b69160bc32796e824360e6d"
             ],
-            "markers": "python_version >= '3.5'",
+            "markers": "python_full_version >= '3.5.0'",
             "version": "==3.3"
         },
         "multidict": {
