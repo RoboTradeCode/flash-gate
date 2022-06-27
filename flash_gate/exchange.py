@@ -1,28 +1,15 @@
 import asyncio
 import itertools
-from asyncio import get_running_loop
 import ccxtpro
+from ccxtpro import Exchange as BaseExchange
 from bidict import bidict
-from .aliases import BaseExchange, CreatedOrder, CreatingOrder
+from .types import FetchOrderData, CreateOrderData
 
 
 class Exchange:
-    def __init__(self, config: dict):
-        gate_config: dict = config["data"]["configs"]["gate_config"]
-        exchange_id: str = gate_config["info"]["exchange"]
-        exchange_cls: BaseExchange = getattr(ccxtpro, exchange_id)
-        exchange_config = {
-            "apiKey": gate_config["account"]["api_key"],
-            "secret": gate_config["account"]["secret_key"],
-            "password": gate_config["account"]["password"],
-            "asyncio_loop": get_running_loop(),
-            "enableRateLimit": gate_config["rate_limits"]["enable_ccxt_rate_limiter"],
-        }
-
-        self.exchange = exchange_cls(exchange_config)
+    def __init__(self, exchange_id: str, config: dict):
+        self.exchange: BaseExchange = getattr(ccxtpro, exchange_id)(config)
         self.orders = bidict()  # id by client_order_id
-
-        self.exchange.check_required_credentials()
 
     async def __aenter__(self):
         return self
@@ -31,74 +18,73 @@ class Exchange:
         await self.close()
 
     async def fetch_order_book(self, symbol: str, limit: int):
-        if self.exchange.has.get("fetchOrderBook"):
-            return await self.exchange.fetch_order_book(symbol, limit)
-        raise NotImplementedError
+        orderbook = await self.exchange.fetch_order_book(symbol, limit)
+        orderbook["timestamp"] *= 1000  # ms to us
+        return orderbook
 
     async def watch_order_book(self, symbol: str, limit: int):
         if self.exchange.has.get("watchOrderBook"):
             return await self.exchange.watch_order_book(symbol, limit)
-        raise NotImplementedError
+        return await self.fetch_order_book(symbol, limit)
 
-    async def fetch_balance(self):
-        if self.exchange.has.get("fetchBalance"):
-            return await self.exchange.fetch_balance()
-        raise NotImplementedError
+    async def fetch_partial_balance(self, parts: list[str]):
+        balance = await self.exchange.fetch_balance()
+        return self._get_partial_balance(balance, parts)
 
-    async def watch_balance(self):
+    async def watch_partial_balance(self, parts: list[str]):
         if self.exchange.has.get("watchBalance"):
-            return await self.exchange.watch_balance()
-        raise NotImplementedError
+            balance = await self.exchange.watch_balance()
+            return self._get_partial_balance(balance, parts)
+        return await self.fetch_partial_balance(parts)
 
-    async def fetch_order(self, order: CreatedOrder):
-        if self.exchange.has.get("fetchOrder"):
-            order_id = self.orders[order["client_order_id"]]
-            opened = await self.exchange.fetch_order(order_id, order["symbol"])
-            opened["client_order_id"] = order["client_order_id"]
-            return opened
-        raise NotImplementedError
+    @staticmethod
+    def _get_partial_balance(balance, parts: list[str]):
+        default = {"free": 0.0, "used": 0.0, "total": 0.0}
+        partial_balance = {part: balance.get(part, default) for part in parts}
+        partial_balance["timestamp"] = balance.get("timestamp")
+        return partial_balance
 
-    async def fetch_orders(self, symbols: list[str]):
-        if self.exchange.has.get("fetchOpenOrders"):
-            tasks = [self.exchange.fetch_open_orders(symbol) for symbol in symbols]
-            results = await asyncio.gather(*tasks)
-            return list(itertools.chain.from_iterable(results))
-        raise NotImplementedError
+    async def fetch_order(self, data: FetchOrderData):
+        order_id = self.orders[data["client_order_id"]]
+        order = await self.exchange.fetch_order(order_id, data["symbol"])
+        order["client_order_id"] = data["client_order_id"]
+        return order
+
+    async def _fetch_open_orders(self, symbols: list[str]):
+        tasks = [self.exchange.fetch_open_orders(symbol) for symbol in symbols]
+        results = await asyncio.gather(*tasks)
+        return list(itertools.chain.from_iterable(results))
 
     async def watch_orders(self):
-        if self.exchange.has.get("watchOrders"):
-            order = await self.exchange.watch_orders()
-            order["client_order_id"] = self.orders.inverse[order["id"]]
-            return order
-        raise NotImplementedError
+        order = await self.exchange.watch_orders()
+        order["client_order_id"] = self.orders.inverse[order["id"]]
+        return order
 
-    async def create_order(self, order: CreatingOrder):
-        if self.exchange.has.get("createOrder"):
-            created = await self.exchange.create_order(
-                order["symbol"],
-                order["type"],
-                order["side"],
-                order["amount"],
-                order["price"],
-            )
-            self.orders[order["client_order_id"]] = created["id"]
-            return created
-        raise NotImplementedError
+    async def create_order(self, data: CreateOrderData):
+        order = await self.exchange.create_order(
+            data["symbol"],
+            data["type"],
+            data["side"],
+            data["amount"],
+            data["price"],
+        )
+        self.orders[data["client_order_id"]] = order["id"]
+        return order
 
-    async def create_orders(self, orders: list[CreatingOrder]):
+    async def create_orders(self, orders: list[CreateOrderData]):
         tasks = [self.create_order(order) for order in orders]
         return await asyncio.gather(*tasks)
 
-    async def cancel_order(self, order: CreatedOrder):
+    async def cancel_order(self, order: FetchOrderData):
         order_id = self.orders[order["client_order_id"]]
         return await self.exchange.cancel_order(order_id, order["symbol"])
 
-    async def cancel_orders(self, orders: list[CreatedOrder]):
+    async def cancel_orders(self, orders: list[FetchOrderData]):
         tasks = [self.cancel_order(order) for order in orders]
         return await asyncio.gather(*tasks)
 
     async def cancel_all_orders(self, symbols: list[str]):
-        orders = await self.fetch_orders(symbols)
+        orders = await self._fetch_open_orders(symbols)
         return await self.cancel_orders(orders)
 
     async def close(self):

@@ -16,6 +16,13 @@ class Gate:
         gate_config = config["data"]["configs"]["gate_config"]
 
         self.logger = logging.getLogger(__name__)
+        exchange_config = {
+            "apiKey": gate_config["account"]["api_key"],
+            "secret": gate_config["account"]["secret_key"],
+            "password": gate_config["account"]["password"],
+            "asyncio_loop": get_running_loop(),
+            "enableRateLimit": gate_config["rate_limits"]["enable_ccxt_rate_limiter"],
+        }
         self.exchange = Exchange(config)
         self.core = Core(config, self._event_handler)
         self.formatter = Formatter(config)

@@ -41,16 +41,19 @@ class Formatter:
         }
 
     @staticmethod
-    async def _format_order_book(data: dict):
+    def _format_order_book(ccxt_order_book):
         keys = ["bids", "asks", "symbol", "timestamp"]
-        return {key: data[key] for key in data if key in keys}
+        robo_order_book = {key: ccxt_order_book[key] for key in keys}
+        robo_order_book["timestamp"] *= 1000
+        return robo_order_book
 
     @staticmethod
-    async def _format_balance(data):
-        return data
+    def _format_partial_balance(ccxt_partial_balance):
+        ccxt_partial_balance["timestamp"] *= 1000
+        return ccxt_partial_balance
 
     @staticmethod
-    async def _format_orders(data: dict):
+    async def _format_orders(data):
         return [Formatter._format_order(order) for order in data]
 
     @staticmethod

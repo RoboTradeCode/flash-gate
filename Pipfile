@@ -13,6 +13,7 @@ bidict = "*"
 [dev-packages]
 pytest = "*"
 coverage = "*"
+pytest-asyncio = "*"
 
 [requires]
 python_version = "3.10"
