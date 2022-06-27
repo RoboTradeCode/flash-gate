@@ -1,7 +1,7 @@
 version: 1
 formatters:
   default:
-    # Формат журналирования IntelliJ IDEA
+    # IntelliJ IDEA log format
     format: '%(asctime)s [%(process)d] %(levelname)s - %(name)s - %(message)s'
 handlers:
   console:
@@ -12,15 +12,18 @@ handlers:
     class: logging.handlers.RotatingFileHandler
     formatter: default
     filename: log/flash-gate.log
-    # Максимальный размер файла, для которого IntelliJ IDEA предоставляет помощь
-    # в написании кода
-    maxBytes: 2560000
-    backupCount: 5
+    maxBytes: 2560000  # idea.max.intellisense.filesize
+    backupCount: 100
 loggers:
-  simple:
+  flash_gate:
     level: DEBUG
+    handlers:
+      - console
+#  ccxt:
+#    level: DEBUG
+#    handlers:
+#      - console
 root:
   level: DEBUG
   handlers:
-    - console
     - file

@@ -15,7 +15,7 @@ class Gate:
         markets: list = config["data"]["markets"]
         gate_config = config["data"]["configs"]["gate_config"]
 
-        self.logger = logging.getLogger("simple")
+        self.logger = logging.getLogger(__name__)
         self.exchange = Exchange(config)
         self.core = Core(config, self._event_handler)
         self.formatter = Formatter(config)

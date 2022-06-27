@@ -5,7 +5,7 @@ from aiohttp import ClientSession
 
 class Configurator:
     def __init__(self, config: ConfigParser):
-        self.logger = logging.getLogger("simple")
+        self.logger = logging.getLogger(__name__)
         self.session = ClientSession(config.get("configurator", "base_url"))
         self.exchange_id = config.get("configurator", "exchange_id")
         self.instance = config.get("configurator", "instance")
@@ -28,7 +28,7 @@ class Configurator:
         return config
 
     @property
-    async def _method(self):
+    def _method(self):
         return f"/{self.exchange_id}/{self.instance}"
 
     async def close(self):
