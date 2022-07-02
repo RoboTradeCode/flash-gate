@@ -30,14 +30,14 @@ class Exchange:
         order_book["timestamp"] = self._convert_ms_to_us(order_book["timestamp"])
         return order_book
 
-    async def fetch_balance(self, parts: list[str]) -> Balance:
+    async def fetch_balance(self, assets: list[str]) -> Balance:
         raw_balance = self._get_actual_balance(self.exchange.fetch_balance)
-        balance = self._format_raw_balance(raw_balance, parts)
+        balance = self._format_raw_balance(raw_balance, assets)
         return balance
 
-    async def watch_balance(self, parts: list[str]) -> Balance:
+    async def watch_balance(self, assets: list[str]) -> Balance:
         raw_balance = self._get_actual_balance(self.exchange.watch_balance)
-        balance = self._format_raw_balance(raw_balance, parts)
+        balance = self._format_raw_balance(raw_balance, assets)
         return balance
 
     def _get_actual_balance(self, method: Callable) -> dict:
