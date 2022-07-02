@@ -6,7 +6,7 @@ from .core import Core
 from .enums import Event, Action
 from .exchange import Exchange
 from .formatters import Formatter
-from .types import Order, FetchOrderData
+from .types import CreateOrderData, FetchOrderData
 from typing import NoReturn
 
 
@@ -69,7 +69,7 @@ class Gate:
         except (json.JSONDecodeError, KeyError) as e:
             self.logger.error("Error in message parsing: %s", str(e))
 
-    async def _create_orders(self, orders: list[Order]):
+    async def _create_orders(self, orders: list[CreateOrderData]):
         orders = await self.exchange.create_orders(orders)
         message = await self.formatter.format(orders, Event.DATA, Action.CREATE_ORDERS)
         await self.core.offer(message)

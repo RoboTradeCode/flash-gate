@@ -1,11 +1,6 @@
 from typing import TypedDict
 
 
-class FetchOrderData(TypedDict):
-    client_order_id: str
-    symbol: str
-
-
 class OrderBook(TypedDict):
     bids: list
     asks: list
@@ -18,10 +13,24 @@ class Balance(TypedDict):
     timestamp: str
 
 
-class Order(TypedDict):
+class CreateOrderData(TypedDict):
     client_order_id: str
     symbol: str
     type: str
     side: str
     amount: float
     price: float
+
+
+class Order(CreateOrderData):
+    id: str
+    filled: float
+
+
+class FetchOrderData(TypedDict):
+    client_order_id: str
+    symbol: str
+
+
+class Message:
+    pass

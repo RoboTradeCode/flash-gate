@@ -3,12 +3,12 @@ from typing import Callable
 import ccxtpro
 from bidict import bidict
 from ccxtpro import Exchange as BaseExchange
-from .types import FetchOrderData, OrderBook, Balance, Order
+from .types import OrderBook, Balance, CreateOrderData, Order, FetchOrderData
 
 
 class Exchange:
     # noinspection PyUnresolvedReferences
-    ORDER_KEYS = Order.__required_keys__
+    ORDER_KEYS = CreateOrderData.__required_keys__
 
     def __init__(self, exchange_id: str, config: dict):
         self.exchange: BaseExchange = getattr(ccxtpro, exchange_id)(config)
@@ -71,11 +71,11 @@ class Exchange:
         orders = self._format_raw_orders(raw_orders)
         return orders
 
-    async def create_orders(self, orders: list[Order]) -> list[Order]:
+    async def create_orders(self, orders: list[CreateOrderData]) -> list[Order]:
         orders = [await self._create_order(order) for order in orders]
         return orders
 
-    async def _create_order(self, data: Order) -> Order:
+    async def _create_order(self, data: CreateOrderData) -> Order:
         raw_order = await self.exchange.create_order(
             data["symbol"],
             data["type"],
@@ -91,7 +91,7 @@ class Exchange:
         orders = [self._format_raw_order(raw_order) for raw_order in raw_orders]
         return orders
 
-    def _format_raw_order(self, raw_order: dict, data: Order = None) -> Order:
+    def _format_raw_order(self, raw_order: dict, data: CreateOrderData = None) -> Order:
         # Default argument value is mutable
         if data is None:
             data = {}
