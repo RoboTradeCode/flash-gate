@@ -71,7 +71,7 @@ class Gate:
 
     async def _create_orders(self, orders: list[CreateOrderData]):
         orders = await self.exchange.create_orders(orders)
-        message = await self.formatter.format(orders, Event.DATA, Action.CREATE_ORDERS)
+        message = self.formatter.format(orders, Event.DATA, Action.CREATE_ORDERS)
         await self.core.offer(message)
 
     async def _cancel_orders(self, orders: list[FetchOrderData]):

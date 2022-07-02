@@ -1,9 +1,8 @@
-import json
 import logging
 from typing import Callable
 import aeron
 from aeron import Subscriber, Publisher
-from .enums import Action
+from .enums import Channel
 
 
 class Core:
@@ -18,36 +17,26 @@ class Core:
         self.balances = Publisher(**publishers["balances"])
         self.core = Publisher(**publishers["core"])
 
-    async def __aenter__(self):
-        return self
+    async def poll(self) -> None:
+        self.subscriber.poll()
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.close()
-
-    async def poll(self):
-        return self.subscriber.poll()
-
-    async def offer(self, event: dict):
-        # Выбор потока для публикации сообщения
-        match event["action"]:
-            case Action.ORDER_BOOK_UPDATE:
+    async def offer(self, message: str, channel: Channel) -> None:
+        match channel:
+            case Channel.ORDERBOOKS:
                 publisher = self.orderbooks
-            case Action.GET_BALANCE | Action.BALANCE_UPDATE:
+            case Channel.BALANCES:
                 publisher = self.balances
             case _:
                 publisher = self.core
 
-        # Отправка сообщения в выбранный поток
-        message = json.dumps(event)
-        return await self._offer(publisher, message)
+        await self._offer(publisher, message)
 
-    async def _offer(self, publisher: Publisher, message: str):
+    async def _offer(self, publisher: Publisher, message: str) -> None:
         while True:
             try:
                 self.logger.info("Offering message to Core: %s", message)
-                result = publisher.offer(message)
-                self.logger.info("Message has been offered to Core:", result)
-                return result
+                publisher.offer(message)
+                break
             except aeron.AeronPublicationNotConnectedError as e:
                 self.logger.warning(str(e))
                 break
@@ -59,3 +48,9 @@ class Core:
         self.orderbooks.close()
         self.balances.close()
         self.core.close()
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()

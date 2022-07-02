@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, auto
 
 
 class Event(str, Enum):
@@ -24,3 +24,9 @@ class Action(str, Enum):
     BALANCE_UPDATE = "balance_update"
     ORDERS_UPDATE = "orders_update"
     PING = "ping"
+
+
+class Channel(Enum):
+    ORDERBOOKS = 1
+    BALANCES = 2
+    CORE = 3
