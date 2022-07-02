@@ -13,9 +13,12 @@ class Balance(TypedDict):
     timestamp: str
 
 
-class CreateOrderData(TypedDict):
+class FetchOrderData(TypedDict):
     client_order_id: str
     symbol: str
+
+
+class CreateOrderData(FetchOrderData):
     type: str
     side: str
     amount: float
@@ -25,11 +28,6 @@ class CreateOrderData(TypedDict):
 class Order(CreateOrderData):
     id: str
     filled: float
-
-
-class FetchOrderData(TypedDict):
-    client_order_id: str
-    symbol: str
 
 
 class Message:
