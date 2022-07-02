@@ -6,7 +6,6 @@ from .core import Core
 from .enums import Event, Action
 from .exchange import Exchange
 from .formatters import Formatter
-from .aliases import CreatingOrder, CreatedOrder
 
 
 class Gate:

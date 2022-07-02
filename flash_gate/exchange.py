@@ -1,9 +1,9 @@
 import itertools
+from typing import Callable
 import ccxtpro
 from bidict import bidict
 from ccxtpro import Exchange as BaseExchange
 from .types import FetchOrderData, OrderBook, Balance, Order
-from typing import Callable
 
 
 class Exchange:
