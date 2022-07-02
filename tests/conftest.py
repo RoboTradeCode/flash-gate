@@ -1,20 +1,21 @@
+from asyncio import get_running_loop
 import pytest
 from flash_gate.exchange import Exchange
-import asyncio
 
 
 @pytest.fixture(scope="session")
 def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-    loop.close()
+    yield get_running_loop()
 
 
 @pytest.mark.asyncio
 @pytest.fixture(scope="session")
 async def exchange():
-    api_key = "hNvghKfuZvZJftJY1fQskQ1t1wYyx2BxoblhBtXi"
-    secret = "tzSP6gSIlSz3IwbKN2UroLCDtyhMSxJQwU3swPJB"
-    exchange = Exchange("kuna", {"apiKey": api_key, "secret": secret})
-    yield exchange
-    await exchange.close()
+    async with Exchange("", {}) as exchange:
+        yield exchange
+
+
+@pytest.mark.asyncio
+@pytest.fixture(scope="session")
+async def order_book(exchange):
+    return {}

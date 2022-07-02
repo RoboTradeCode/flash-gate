@@ -25,7 +25,7 @@ class Gate:
             "enableRateLimit": gate_config["rate_limits"]["enable_ccxt_rate_limiter"],
         }
         self.exchange = Exchange("kuna", exchange_config)
-        self.core = Core(config, self._event_handler)
+        self.core = Core(config, self._core_handler)
         self.formatter = Formatter(config)
         self.idle_strategy = AsyncSleepingIdleStrategy(1)
 
@@ -47,7 +47,7 @@ class Gate:
         ]
         await asyncio.gather(*tasks)
 
-    def _event_handler(self, message: str):
+    def _core_handler(self, message: str):
         try:
             event = json.loads(message)
             self.logger.info("Received message from Core: %s", event)
@@ -68,6 +68,9 @@ class Gate:
 
         except (json.JSONDecodeError, KeyError) as e:
             self.logger.error("Error in message parsing: %s", str(e))
+
+    def _serialize_message(self, message: str):
+        event = json.loads(message)
 
     async def _create_orders(self, orders: list[CreateOrderData]):
         orders = await self.exchange.create_orders(orders)

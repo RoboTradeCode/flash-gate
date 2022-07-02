@@ -8,7 +8,7 @@ from .types import OrderBook, Balance, CreateOrderData, Order, FetchOrderData
 
 class Exchange:
     # noinspection PyUnresolvedReferences
-    ORDER_KEYS = CreateOrderData.__required_keys__
+    ORDER_KEYS = Order.__required_keys__
 
     def __init__(self, exchange_id: str, config: dict):
         self.exchange: BaseExchange = getattr(ccxtpro, exchange_id)(config)

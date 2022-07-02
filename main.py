@@ -18,13 +18,12 @@ async def main():
     ini = ConfigParser()
     ini.read(CONFIG_FILENAME)
 
-    # Получение основной конфигурации
     async with Configurator(ini) as configurator:
         config = await configurator.get_config()
 
     # Запуск шлюза
     async with Gate(config) as gate:
-        await gate.run()
+        pass
 
 
 if __name__ == "__main__":

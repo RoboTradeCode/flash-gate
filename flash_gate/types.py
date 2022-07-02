@@ -27,8 +27,6 @@ class CreateOrderData(FetchOrderData):
 
 class Order(CreateOrderData):
     id: str
+    status: str
     filled: float
-
-
-class Message:
-    pass
+    timestamp: int
