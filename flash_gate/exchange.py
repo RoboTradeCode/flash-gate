@@ -27,7 +27,7 @@ class Exchange:
 
     def _format_raw_order_book(self, raw_order_book: dict) -> OrderBook:
         order_book = raw_order_book.copy()
-        order_book["timestamp"] = self._convert_timestamp_to_us(order_book["timestamp"])
+        order_book["timestamp"] = self._convert_ms_to_us(order_book["timestamp"])
         return order_book
 
     async def fetch_balance(self, parts: list[str]) -> Balance:
@@ -51,7 +51,7 @@ class Exchange:
 
     def _format_raw_balance(self, raw_balance: dict, parts: list[str]) -> Balance:
         balance = self._get_partial_balance(raw_balance, parts)
-        balance["timestamp"] = self._convert_timestamp_to_us(balance["timestamp"])
+        balance["timestamp"] = self._convert_ms_to_us(balance["timestamp"])
         return balance
 
     @staticmethod
@@ -99,7 +99,7 @@ class Exchange:
         order = self._filter_keys(raw_order, self.ORDER_KEYS)
         order = self._fill_empty_keys(order, data)
         order["client_order_id"] = self.id_by_client_order_id.inverse[order["id"]]
-        order["timestamp"] = self._convert_timestamp_to_us(order["timestamp"])
+        order["timestamp"] = self._convert_ms_to_us(order["timestamp"])
         return order
 
     @staticmethod
@@ -114,8 +114,8 @@ class Exchange:
         return filled_dict
 
     @staticmethod
-    def _convert_timestamp_to_us(timestamp: int) -> int:
-        return timestamp * 1000
+    def _convert_ms_to_us(ms: int) -> int:
+        return ms * 1000
 
     async def cancel_orders(self, orders: list[FetchOrderData]) -> None:
         for order in orders:

@@ -6,9 +6,12 @@ from .core import Core
 from .enums import Event, Action
 from .exchange import Exchange
 from .formatters import Formatter
+from .types import Order, FetchOrderData
+from typing import NoReturn
 
 
 class Gate:
+    # TODO: Split into several functions
     def __init__(self, config: dict):
         assets: list = config["data"]["assets_labels"]
         markets: list = config["data"]["markets"]
@@ -19,10 +22,9 @@ class Gate:
             "apiKey": gate_config["account"]["api_key"],
             "secret": gate_config["account"]["secret_key"],
             "password": gate_config["account"]["password"],
-            "asyncio_loop": get_running_loop(),
             "enableRateLimit": gate_config["rate_limits"]["enable_ccxt_rate_limiter"],
         }
-        self.exchange = Exchange(config)
+        self.exchange = Exchange("kuna", exchange_config)
         self.core = Core(config, self._event_handler)
         self.formatter = Formatter(config)
         self.idle_strategy = AsyncSleepingIdleStrategy(1)
@@ -35,13 +37,7 @@ class Gate:
 
         self.data = 0
 
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.close()
-
-    async def run(self):
+    async def run(self) -> NoReturn:
         tasks = [
             self._poll(),
             self._watch_order_books(),
@@ -73,28 +69,12 @@ class Gate:
         except (json.JSONDecodeError, KeyError) as e:
             self.logger.error("Error in message parsing: %s", str(e))
 
-    async def _create_orders(self, orders: list[CreatingOrder]):
-        # [
-        #     {
-        #         "symbol": "XRP/USDT",
-        #         "type": "market",
-        #         "side": "sell",
-        #         "amount": 64.212635,
-        #         "price": 0.40221,
-        #         "client_order_id": "9e743ffa-eb10-11ec-8fea-0242ac120002"
-        #     }
-        # ]
+    async def _create_orders(self, orders: list[Order]):
         orders = await self.exchange.create_orders(orders)
         message = await self.formatter.format(orders, Event.DATA, Action.CREATE_ORDERS)
         await self.core.offer(message)
 
-    async def _cancel_orders(self, orders: list[CreatedOrder]):
-        # [
-        #     {
-        #         "client_order_id": "9e743ffa-eb10-11ec-8fea-0242ac120002",
-        #         "symbol": "XRP/USDT"
-        #     }
-        # ]
+    async def _cancel_orders(self, orders: list[FetchOrderData]):
         orders = await self.exchange.cancel_orders(orders)
         message = await self.formatter.format(orders, Event.DATA, Action.CANCEL_ORDERS)
         await self.core.offer(message)
@@ -105,7 +85,7 @@ class Gate:
         message = await self.formatter.format(orders, Event.DATA, action)
         await self.core.offer(message)
 
-    async def _get_orders(self, orders: list[CreatedOrder]):
+    async def _get_orders(self, orders: list[FetchOrderData]):
         # [
         #     {
         #         "client_order_id": "9e743ffa-eb10-11ec-8fea-0242ac120002",
@@ -115,7 +95,7 @@ class Gate:
         tasks = [self._get_order(order) for order in orders]
         await asyncio.gather(*tasks)
 
-    async def _get_order(self, order: CreatedOrder):
+    async def _get_order(self, order: FetchOrderData):
         # {
         #     "client_order_id": "9e743ffa-eb10-11ec-8fea-0242ac120002",
         #     "symbol": "XRP/USDT"
@@ -195,3 +175,9 @@ class Gate:
     async def close(self):
         await self.exchange.close()
         await self.core.close()
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()
