@@ -8,7 +8,7 @@ from .types import FetchOrderData, OrderBook, Balance, Order
 
 class Exchange:
     # noinspection PyUnresolvedReferences
-    ORDER_KEYS = Order.__required__
+    ORDER_KEYS = Order.__required_keys__
 
     def __init__(self, exchange_id: str, config: dict):
         self.exchange: BaseExchange = getattr(ccxtpro, exchange_id)(config)
@@ -40,20 +40,14 @@ class Exchange:
         balance = self._format_raw_balance(raw_balance, parts)
         return balance
 
-    def _get_actual_balance(self, method: Callable):
+    def _get_actual_balance(self, method: Callable) -> dict:
         while True:
             raw_balance = method()
-            if self._is_balance_actual(raw_balance):
-                self._update_actual_balance(raw_balance)
+            if raw_balance["timestamp"] > self.last_balance_timestamp:
+                self.last_balance_timestamp = raw_balance["timestamp"]
                 break
 
         return raw_balance
-
-    def _is_balance_actual(self, raw_balance: dict) -> None:
-        return raw_balance["timestamp"] > self.last_balance_timestamp
-
-    def _update_actual_balance(self, raw_balance: dict) -> None:
-        self.last_balance_timestamp = raw_balance["timestamp"]
 
     def _format_raw_balance(self, raw_balance: dict, parts: list[str]) -> Balance:
         balance = self._get_partial_balance(raw_balance, parts)
