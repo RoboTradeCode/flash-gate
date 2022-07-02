@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from .enums import Event, Node, Action
 
@@ -9,16 +10,22 @@ class Formatter:
         self.instance = instance
         self.algo = algo
 
-    def format(self, event_id: str, event: Event, action: Action, data):
-        return {
-            "event_id": event_id,
-            "event": event,
-            "exchange": self.exchange,
-            "node": self.node,
-            "instance": self.instance,
-            "algo": self.algo,
-            "action": action,
-            "message": "",
-            "timestamp": int(datetime.now().timestamp() * 1000000),
-            "data": data,
-        }
+    def format(self, event_id: str, event: Event, action: Action, data) -> str:
+        return json.dumps(
+            {
+                "event_id": event_id,
+                "event": event,
+                "exchange": self.exchange,
+                "node": self.node,
+                "instance": self.instance,
+                "algo": self.algo,
+                "action": action,
+                "message": "",
+                "timestamp": self._get_timestamp_in_us(),
+                "data": data,
+            }
+        )
+
+    @staticmethod
+    def _get_timestamp_in_us():
+        return int(datetime.now().timestamp() * 1000000)
