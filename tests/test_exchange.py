@@ -1,29 +1,16 @@
 import pytest
+import data
 from flash_gate.exchange import Exchange
-
-
-ORDER_KEYS = {
-    "id",
-    "client_order_id",
-    "timestamp",
-    "status",
-    "symbol",
-    "type",
-    "side",
-    "price",
-    "amount",
-    "filled",
-}
 
 
 class TestExchangeClass:
     @staticmethod
     def test_order_keys():
-        assert set(Exchange.ORDER_KEYS) == ORDER_KEYS
+        assert set(Exchange.ORDER_KEYS) == data.ORDER_KEYS
 
     @staticmethod
     def test_filter_keys():
-        filtered = Exchange._filter_keys({"Spam!": "Bacon", "Ni!": 8}, ["Ni!"])
+        filtered = Exchange._filter_keys({"a": "1", "b": 2}, ["Ni!"])
         return filtered == {"Ni!": 8}
 
     @staticmethod

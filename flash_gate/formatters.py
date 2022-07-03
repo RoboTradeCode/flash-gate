@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
-from .enums import Event, Node, Action
+from .enums import Node
+from .types import Message
 
 
 class Formatter:
@@ -10,23 +11,36 @@ class Formatter:
         self.instance = instance
         self.algo = algo
 
-    def format(self, event_id: str, event: Event, action: Action, data) -> str:
-        deserialized_message = {
-            "event_id": event_id,
-            "event": event,
+    def format(self, message: Message) -> str:
+        template = self._get_template()
+        filled = self._fill_template(template, message)
+        return self._serialize(filled)
+
+    def _get_template(self) -> dict:
+        return {
+            "event_id": None,
+            "event": None,
             "exchange": self.exchange,
             "node": self.node,
             "instance": self.instance,
             "algo": self.algo,
-            "action": action,
+            "action": None,
             "message": "",
             "timestamp": self._get_timestamp_in_us(),
-            "data": data,
+            "data": None,
         }
-
-        message = json.dumps(deserialized_message)
-        return message
 
     @staticmethod
     def _get_timestamp_in_us() -> int:
-        return int(datetime.now().timestamp() * 1000000)
+        return int(datetime.now().timestamp() * 1_000_000)
+
+    @staticmethod
+    def _fill_template(template: dict, data: dict) -> dict:
+        filled = template.copy()
+        for key, value in data.items():
+            filled[key] = value
+        return filled
+
+    @staticmethod
+    def _serialize(message: dict) -> str:
+        return json.dumps(message)

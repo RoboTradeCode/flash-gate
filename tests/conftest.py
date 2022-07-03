@@ -1,5 +1,6 @@
 from asyncio import get_running_loop
 import pytest
+import data
 from flash_gate.exchange import Exchange
 
 
@@ -17,5 +18,5 @@ async def exchange():
 
 @pytest.mark.asyncio
 @pytest.fixture(scope="session")
-async def order_book(exchange):
-    return {}
+async def raw_order_book(exchange):
+    return data.RAW_ORDER_BOOK

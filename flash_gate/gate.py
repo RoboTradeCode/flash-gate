@@ -7,70 +7,82 @@ from .enums import Event, Action
 from .exchange import Exchange
 from .formatters import Formatter
 from .types import CreateOrderData, FetchOrderData
-from typing import NoReturn
-
+from typing import NoReturn, Coroutine
 
 class Gate:
-    # TODO: Split into several functions
     def __init__(self, config: dict):
-        assets: list = config["data"]["assets_labels"]
-        markets: list = config["data"]["markets"]
         gate_config = config["data"]["configs"]["gate_config"]
 
         self.logger = logging.getLogger(__name__)
-        exchange_config = {
+        self.exchange = Exchange("kuna", self._get_exchange_config(gate_config))
+        self.core = Core(config, self._message_handler)
+        self.formatter = Formatter()
+        self.idle_strategy = AsyncSleepingIdleStrategy(1)
+
+        self.assets = self._get_assets(config["data"]["assets_labels"])
+        self.symbols = self._get_symbols(config["data"]["markets"])
+        self.depth: int = gate_config["info"]["depth"]
+        self.ping_delay: float = gate_config["info"]["ping_delay"]
+        self.subscribe_timeout: float = gate_config["rate_limits"]["subscribe_timeout"]
+
+        self.data = 0
+
+    @staticmethod
+    def _get_exchange_config(gate_config: dict) -> dict:
+        return {
             "apiKey": gate_config["account"]["api_key"],
             "secret": gate_config["account"]["secret_key"],
             "password": gate_config["account"]["password"],
             "enableRateLimit": gate_config["rate_limits"]["enable_ccxt_rate_limiter"],
         }
-        self.exchange = Exchange("kuna", exchange_config)
-        self.core = Core(config, self._core_handler)
-        self.formatter = Formatter(config)
-        self.idle_strategy = AsyncSleepingIdleStrategy(1)
 
-        self.assets: list[str] = [asset["common"] for asset in assets]
-        self.symbols: list[str] = [market["common_symbol"] for market in markets]
-        self.depth: int = gate_config["info"]["depth"]
-        self.ping_delay = gate_config["info"]["ping_delay"]
-        self.subscribe_timeout = gate_config["rate_limits"]["subscribe_timeout"]
+    @staticmethod
+    def _get_assets(assets_labels: list) -> list[str]:
+        return [asset_label["common"] for asset_label in assets_labels]
 
-        self.data = 0
+    @staticmethod
+    def _get_symbols(markets: list) -> list[str]:
+        return [market["common_symbol"] for market in markets]
 
     async def run(self) -> NoReturn:
-        tasks = [
+        tasks = self._get_tasks()
+        await asyncio.gather(*tasks)
+
+    def _get_tasks(self) -> list:
+        return [
             self._poll(),
             self._watch_order_books(),
             self._watch_balance(),
             self._watch_orders(),
             self._ping(),
         ]
-        await asyncio.gather(*tasks)
 
-    def _core_handler(self, message: str):
+    def _message_handler(self, message: str):
+        self.logger.info("Received message: %s", message)
+        event = self._deserialize_message(message)
+
+        match event["event"], event["action"]:
+            case Event.COMMAND, Action.CREATE_ORDERS:
+                asyncio.create_task(self._create_orders(event["data"]))
+            case Event.COMMAND, Action.CANCEL_ORDERS:
+                asyncio.create_task(self._cancel_orders(event["data"]))
+            case Event.COMMAND, Action.CANCEL_ALL_ORDERS:
+                asyncio.create_task(self._cancel_all_orders())
+            case Event.COMMAND, Action.GET_ORDERS:
+                asyncio.create_task(self._get_orders(event["data"]))
+            case Event.COMMAND, Action.GET_BALANCE:
+                asyncio.create_task(self._get_balance(event["data"]))
+            case _:
+                logging.warning("Unknown event type: %s", event)
+
+    def _deserialize_message(self, message: str) -> dict:
         try:
-            event = json.loads(message)
-            self.logger.info("Received message from Core: %s", event)
+            return json.loads(message)
+        except json.JSONDecodeError as e:
+            self.logger.error("Message deserialize error: %s", e)
 
-            match event["event"], event["action"]:
-                case Event.COMMAND, Action.CREATE_ORDERS:
-                    asyncio.create_task(self._create_orders(event["data"]))
-                case Event.COMMAND, Action.CANCEL_ORDERS:
-                    asyncio.create_task(self._cancel_orders(event["data"]))
-                case Event.COMMAND, Action.CANCEL_ALL_ORDERS:
-                    asyncio.create_task(self._cancel_all_orders())
-                case Event.COMMAND, Action.GET_ORDERS:
-                    asyncio.create_task(self._get_orders(event["data"]))
-                case Event.COMMAND, Action.GET_BALANCE:
-                    asyncio.create_task(self._get_balance(event["data"]))
-                case _:
-                    logging.warning("Unknown event type: %s", event)
+    def _get_task(self, action: Action) -> Coroutine:
 
-        except (json.JSONDecodeError, KeyError) as e:
-            self.logger.error("Error in message parsing: %s", str(e))
-
-    def _serialize_message(self, message: str):
-        event = json.loads(message)
 
     async def _create_orders(self, orders: list[CreateOrderData]):
         orders = await self.exchange.create_orders(orders)

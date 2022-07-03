@@ -1,4 +1,6 @@
 from typing import TypedDict
+from enums import Event, Action
+from typing import Any
 
 
 class OrderBook(TypedDict):
@@ -30,3 +32,11 @@ class Order(CreateOrderData):
     status: str
     filled: float
     timestamp: int
+
+
+class Message(TypedDict):
+    event_id: str
+    event: Event
+    action: Action
+    message: str
+    data: Any
