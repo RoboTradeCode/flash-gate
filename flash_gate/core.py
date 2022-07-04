@@ -2,7 +2,7 @@ import logging
 from typing import Callable
 import aeron
 from aeron import Subscriber, Publisher
-from .enums import Channel
+from .enums import CorePublisher
 
 
 class Core:
@@ -20,11 +20,11 @@ class Core:
     async def poll(self) -> None:
         self.subscriber.poll()
 
-    async def offer(self, message: str, channel: Channel) -> None:
+    async def offer(self, message: str, channel: CorePublisher) -> None:
         match channel:
-            case Channel.ORDERBOOKS:
+            case CorePublisher.ORDERBOOKS:
                 publisher = self.orderbooks
-            case Channel.BALANCES:
+            case CorePublisher.BALANCES:
                 publisher = self.balances
             case _:
                 publisher = self.core

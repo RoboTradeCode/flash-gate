@@ -1,14 +1,18 @@
+import datetime
 import itertools
 from typing import Callable
 import ccxtpro
 from bidict import bidict
 from ccxtpro import Exchange as BaseExchange
 from .types import OrderBook, Balance, CreateOrderData, Order, FetchOrderData
+from datetime import datetime
 
 
 class Exchange:
     # noinspection PyUnresolvedReferences
     ORDER_KEYS = Order.__required_keys__
+    # noinspection PyUnresolvedReferences
+    ORDER_BOOK_KEYS = OrderBook.__required_keys__
 
     def __init__(self, exchange_id: str, config: dict):
         self.exchange: BaseExchange = getattr(ccxtpro, exchange_id)(config)
@@ -26,32 +30,35 @@ class Exchange:
         return order_book
 
     def _format_raw_order_book(self, raw_order_book: dict) -> OrderBook:
-        order_book = raw_order_book.copy()
+        order_book = self._filter_keys(raw_order_book, self.ORDER_BOOK_KEYS)
         order_book["timestamp"] = self._convert_ms_to_us(order_book["timestamp"])
         return order_book
 
     async def fetch_balance(self, assets: list[str]) -> Balance:
-        raw_balance = self._get_actual_balance(self.exchange.fetch_balance)
+        raw_balance = await self._get_actual_balance(self.exchange.fetch_balance)
         balance = self._format_raw_balance(raw_balance, assets)
         return balance
 
     async def watch_balance(self, assets: list[str]) -> Balance:
-        raw_balance = self._get_actual_balance(self.exchange.watch_balance)
+        raw_balance = await self._get_actual_balance(self.exchange.watch_balance)
         balance = self._format_raw_balance(raw_balance, assets)
         return balance
 
-    def _get_actual_balance(self, method: Callable) -> dict:
+    async def _get_actual_balance(self, method: Callable) -> dict:
         while True:
-            raw_balance = method()
-            if raw_balance["timestamp"] > self.last_balance_timestamp:
-                self.last_balance_timestamp = raw_balance["timestamp"]
+            raw_balance = await method()
+            timestamp = raw_balance.get("timestamp", datetime.now().timestamp())
+            if timestamp > self.last_balance_timestamp:
+                self.last_balance_timestamp = timestamp
                 break
 
         return raw_balance
 
     def _format_raw_balance(self, raw_balance: dict, parts: list[str]) -> Balance:
-        balance = self._get_partial_balance(raw_balance, parts)
-        balance["timestamp"] = self._convert_ms_to_us(balance["timestamp"])
+        balance = dict()
+        balance["assets"] = self._get_partial_balance(raw_balance, parts)
+        timestamp = raw_balance.get("timestamp", int(datetime.now().timestamp() * 1000))
+        balance["timestamp"] = self._convert_ms_to_us(timestamp)
         return balance
 
     @staticmethod
@@ -59,6 +66,11 @@ class Exchange:
         default = {"free": 0.0, "used": 0.0, "total": 0.0}
         partial_balance = {part: raw_balance.get(part, default) for part in parts}
         return partial_balance
+
+    async def fetch_orders(self, symbols: list[str]) -> list[Order]:
+        raw_orders = await self._fetch_open_orders(symbols)
+        orders = self._format_raw_orders(raw_orders)
+        return orders
 
     async def fetch_order(self, data: FetchOrderData) -> Order:
         order_id = self.id_by_client_order_id[data["client_order_id"]]
@@ -137,9 +149,3 @@ class Exchange:
 
     async def close(self) -> None:
         await self.exchange.close()
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.close()

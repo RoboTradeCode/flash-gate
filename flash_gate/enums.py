@@ -1,20 +1,18 @@
 from enum import Enum
 
 
-class Event(str, Enum):
+class EventType(str, Enum):
     COMMAND = "command"
     DATA = "data"
     ERROR = "error"
 
 
-class Node(str, Enum):
-    CONFIGURATOR = "configurator"
+class EventNode(str, Enum):
     CORE = "core"
     GATE = "gate"
-    AGENT = "agent"
 
 
-class Action(str, Enum):
+class EventAction(str, Enum):
     GET_BALANCE = "get_balance"
     CREATE_ORDERS = "create_orders"
     CANCEL_ORDERS = "cancel_orders"
@@ -26,7 +24,7 @@ class Action(str, Enum):
     PING = "ping"
 
 
-class Channel(Enum):
+class CorePublisher(Enum):
     ORDERBOOKS = 1
     BALANCES = 2
     CORE = 3

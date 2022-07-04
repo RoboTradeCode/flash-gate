@@ -1,18 +1,18 @@
-from typing import TypedDict
-from enums import Event, Action
 from typing import Any
+from typing import TypedDict, Type
+from .enums import EventType, EventAction, EventNode
 
 
 class OrderBook(TypedDict):
+    symbol: str
     bids: list
     asks: list
-    symbol: str
     timestamp: int
 
 
 class Balance(TypedDict):
     assets: list
-    timestamp: str
+    timestamp: int
 
 
 class FetchOrderData(TypedDict):
@@ -27,6 +27,11 @@ class CreateOrderData(FetchOrderData):
     price: float
 
 
+CreateOrdersData = list[CreateOrderData]
+CancelOrdersData = list[FetchOrderData]
+GetOrdersData = list[FetchOrderData]
+
+
 class Order(CreateOrderData):
     id: str
     status: str
@@ -36,7 +41,20 @@ class Order(CreateOrderData):
 
 class Message(TypedDict):
     event_id: str
-    event: Event
-    action: Action
+    event: EventType
+    action: EventAction
     message: str
+    data: Any
+
+
+class Event(TypedDict, total=False):
+    event_id: str
+    event: EventType
+    exchange: str
+    node: EventNode
+    instance: str
+    algo: str
+    action: EventAction
+    message: str
+    timestamp: int
     data: Any

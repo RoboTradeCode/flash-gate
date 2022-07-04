@@ -1,31 +1,33 @@
 import json
 from datetime import datetime
-from .enums import Node
-from .types import Message
+from .types import Event
+from .enums import EventType
 
 
 class Formatter:
-    def __init__(self, algo: str, node: Node, exchange: str, instance: str):
-        self.exchange = exchange
-        self.node = node
-        self.instance = instance
-        self.algo = algo
+    def __init__(self, config: dict):
+        gate_config = config["data"]["configs"]["gate_config"]
 
-    def format(self, message: Message) -> str:
+        self.algo = config["algo"]
+        self.node = gate_config["info"]["node"]
+        self.instance = gate_config["info"]["instance"]
+        self.exchange = gate_config["exchange"]["exchange_id"]
+
+    def format(self, event: Event) -> str:
         template = self._get_template()
-        filled = self._fill_template(template, message)
+        filled = self._fill_template(template, event)
         return self._serialize(filled)
 
     def _get_template(self) -> dict:
         return {
             "event_id": None,
-            "event": None,
+            "event": EventType.DATA,
             "exchange": self.exchange,
             "node": self.node,
             "instance": self.instance,
             "algo": self.algo,
             "action": None,
-            "message": "",
+            "message": None,
             "timestamp": self._get_timestamp_in_us(),
             "data": None,
         }
