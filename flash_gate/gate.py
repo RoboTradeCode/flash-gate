@@ -83,8 +83,11 @@ class Gate:
             self.logger.error("Message deserialize error: %s", e)
 
     def _get_task(self, event: Event) -> Coroutine:
+        if not isinstance(event, dict):
+            return asyncio.sleep(0)
+
         # TODO: Создавать полиморфные классы
-        match event["action"]:
+        match event.get("action"):
             case EventAction.CREATE_ORDERS:
                 return self._create_orders(event)
             case EventAction.CANCEL_ORDERS:
@@ -97,6 +100,7 @@ class Gate:
                 return self._get_balance(event)
             case _:
                 logging.warning("Unknown action: %s", event["action"])
+                return asyncio.sleep(0)
 
     async def _create_orders(self, event: Event):
         event_id = event["event_id"]
