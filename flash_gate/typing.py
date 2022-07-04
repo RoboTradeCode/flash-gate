@@ -1,5 +1,5 @@
 from typing import Any
-from typing import TypedDict, Type
+from typing import TypedDict, Optional
 from .enums import EventType, EventAction, EventNode
 
 
@@ -7,7 +7,7 @@ class OrderBook(TypedDict):
     symbol: str
     bids: list
     asks: list
-    timestamp: int
+    timestamp: Optional[int]
 
 
 class Balance(TypedDict):

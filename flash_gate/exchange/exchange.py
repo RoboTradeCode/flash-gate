@@ -1,20 +1,16 @@
 import datetime
 import itertools
-from typing import Callable
+from datetime import datetime
+from typing import Callable, Optional, Awaitable
 import ccxtpro
 from bidict import bidict
 from ccxtpro import Exchange as BaseExchange
-from flash_gate.typing import OrderBook, Balance, CreateOrderData, Order, FetchOrderData
-from datetime import datetime
-from typing import Optional, Awaitable
+from .enums import CcxtStructure
+from .formatters import Formatter, OrderBookFormatter
+from .typing import OrderBook, Balance, Order
 
 
 class Exchange:
-    # noinspection PyUnresolvedReferences
-    ORDER_KEYS = Order.__required_keys__
-    # noinspection PyUnresolvedReferences
-    ORDER_BOOK_KEYS = OrderBook.__required_keys__
-
     def __init__(self, exchange_id: str, config: dict):
         self.exchange: BaseExchange = getattr(ccxtpro, exchange_id)(config)
         self.id_by_client_order_id = bidict()
@@ -32,8 +28,18 @@ class Exchange:
 
     async def _get_order_book(self, method: Awaitable) -> OrderBook:
         raw_order_book = await method
-        order_book = self._format_raw_order_book(raw_order_book)
+        order_book = self._format(raw_order_book, CcxtStructure.ORDER_BOOK)
         return order_book
+
+    def _format(self, ccxt_structure, ccxt_structure_type: CcxtStructure):
+        formatter = self._get_formatter()
+        return formatter.format(data)
+
+    @staticmethod
+    def _get_formatter(ccxt_structure_type: CcxtStructure) -> Formatter:
+        match ccxt_structure_type:
+            case _:
+                return OrderBookFormatter()
 
     def _format_raw_order_book(self, raw_order_book: dict) -> OrderBook:
         order_book = self._filter_keys(raw_order_book, self.ORDER_BOOK_KEYS)
