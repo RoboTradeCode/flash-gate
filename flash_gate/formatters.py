@@ -1,7 +1,8 @@
 import json
 from datetime import datetime
-from .types import Event
+from .types import Event, OrderBook
 from .enums import EventType
+from abc import ABC, abstractmethod
 
 
 class JsonFormatter:

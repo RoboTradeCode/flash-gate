@@ -1,7 +1,7 @@
 from asyncio import get_running_loop
 import pytest
 import data
-from flash_gate.exchange import Exchange
+from flash_gate.exchange.exchange import Exchange
 
 
 @pytest.fixture(scope="session")

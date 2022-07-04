@@ -4,7 +4,7 @@ import logging
 from bidict import bidict
 import uuid
 from .enums import EventAction
-from .exchange import Exchange
+from flash_gate.exchange.exchange import Exchange
 from .types import (
     CancelOrdersData,
     FetchOrderData,

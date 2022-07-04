@@ -4,8 +4,9 @@ from typing import Callable
 import ccxtpro
 from bidict import bidict
 from ccxtpro import Exchange as BaseExchange
-from .types import OrderBook, Balance, CreateOrderData, Order, FetchOrderData
+from flash_gate.types import OrderBook, Balance, CreateOrderData, Order, FetchOrderData
 from datetime import datetime
+from typing import Optional, Awaitable
 
 
 class Exchange:
@@ -19,19 +20,24 @@ class Exchange:
         self.id_by_client_order_id = bidict()
         self.last_balance_timestamp = 0
 
-    async def fetch_order_book(self, symbol: str, depth: int) -> OrderBook:
-        raw_order_book = await self.exchange.fetch_order_book(symbol, depth)
-        order_book = self._format_raw_order_book(raw_order_book)
+    async def fetch_order_book(self, symbol: str, limit: int) -> OrderBook:
+        method = await self.exchange.fetch_order_book(symbol, limit)
+        order_book = await self._get_order_book(method)
         return order_book
 
-    async def watch_order_book(self, symbol: str, depth: int) -> OrderBook:
-        raw_order_book = await self.exchange.watch_order_book(symbol, depth)
+    async def watch_order_book(self, symbol: str, limit: int) -> OrderBook:
+        method = await self.exchange.watch_order_book(symbol, limit)
+        order_book = await self._get_order_book(method)
+        return order_book
+
+    async def _get_order_book(self, method: Awaitable) -> OrderBook:
+        raw_order_book = await method
         order_book = self._format_raw_order_book(raw_order_book)
         return order_book
 
     def _format_raw_order_book(self, raw_order_book: dict) -> OrderBook:
         order_book = self._filter_keys(raw_order_book, self.ORDER_BOOK_KEYS)
-        order_book["timestamp"] = self._convert_ms_to_us(order_book["timestamp"])
+        order_book["timestamp"] = self._get_timestamp_in_us(order_book)
         return order_book
 
     async def fetch_balance(self, assets: list[str]) -> Balance:
@@ -57,8 +63,7 @@ class Exchange:
     def _format_raw_balance(self, raw_balance: dict, parts: list[str]) -> Balance:
         balance = dict()
         balance["assets"] = self._get_partial_balance(raw_balance, parts)
-        timestamp = raw_balance.get("timestamp", int(datetime.now().timestamp() * 1000))
-        balance["timestamp"] = self._convert_ms_to_us(timestamp)
+        balance["timestamp"] = self._get_timestamp_in_us(raw_balance)
         return balance
 
     @staticmethod
@@ -66,6 +71,10 @@ class Exchange:
         default = {"free": 0.0, "used": 0.0, "total": 0.0}
         partial_balance = {part: raw_balance.get(part, default) for part in parts}
         return partial_balance
+
+    def _get_timestamp_in_us(self, raw: dict) -> Optional[int]:
+        if timestamp_in_ms := raw.get("timestamp"):
+            return self._convert_ms_to_us(timestamp_in_ms)
 
     async def fetch_orders(self, symbols: list[str]) -> list[Order]:
         raw_orders = await self._fetch_open_orders(symbols)
