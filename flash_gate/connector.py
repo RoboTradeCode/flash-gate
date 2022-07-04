@@ -1,4 +1,4 @@
-from .types import Event, EventAction
+from .typing import Event, EventAction
 from aeron import Publisher, Subscriber
 from aeron.concurrent import AsyncSleepingIdleStrategy
 import aeron

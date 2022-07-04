@@ -5,7 +5,7 @@ from bidict import bidict
 import uuid
 from .enums import EventAction
 from flash_gate.exchange.exchange import Exchange
-from .types import (
+from .typing import (
     CancelOrdersData,
     FetchOrderData,
     Event,

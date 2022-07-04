@@ -4,7 +4,7 @@ from typing import Callable
 import ccxtpro
 from bidict import bidict
 from ccxtpro import Exchange as BaseExchange
-from flash_gate.types import OrderBook, Balance, CreateOrderData, Order, FetchOrderData
+from flash_gate.typing import OrderBook, Balance, CreateOrderData, Order, FetchOrderData
 from datetime import datetime
 from typing import Optional, Awaitable
 
