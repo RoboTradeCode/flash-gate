@@ -4,7 +4,7 @@ from .types import Event
 from .enums import EventType
 
 
-class Formatter:
+class JsonFormatter:
     def __init__(self, config: dict):
         gate_config = config["data"]["configs"]["gate_config"]
 

@@ -1,14 +1,10 @@
 import asyncio
 import json
 import logging
-from aeron.concurrent import AsyncSleepingIdleStrategy
 from bidict import bidict
 import uuid
-
-from .core import Core
 from .enums import EventAction
 from .exchange import Exchange
-from .formatters import Formatter
 from .types import (
     CancelOrdersData,
     FetchOrderData,
@@ -17,7 +13,10 @@ from .types import (
     GetOrdersData,
 )
 from typing import NoReturn, Coroutine
-from .enums import CorePublisher
+from .connector import AeronConnector
+
+
+PING_DELAY_IN_SECONDS = 1
 
 
 class Gate:
@@ -28,9 +27,7 @@ class Gate:
 
         self.logger = logging.getLogger(__name__)
         self.exchange = Exchange(exchange_id, exchange_config)
-        self.formatter = Formatter(config)
-        self.core = Core(config, self._message_handler)
-        self.idle_strategy = AsyncSleepingIdleStrategy(1)
+        self.connector = AeronConnector(config, self._handler)
 
         self.assets = self._get_assets(config["data"]["assets_labels"])
         self.symbols = self._get_symbols(config["data"]["markets"])
@@ -38,7 +35,7 @@ class Gate:
         self.data_collection_method = gate_config["data_collection_method"]
 
         self.event_id_by_client_order_id = bidict()
-        self.data = 0
+        self.order_books_received = 0
 
     @staticmethod
     def _get_exchange_config(gate_config: dict) -> dict:
@@ -63,14 +60,14 @@ class Gate:
 
     def _get_background_tasks(self) -> list[Coroutine]:
         return [
-            self._poll(),
+            self.connector.run(),
             self._watch_order_books(),
             self._watch_balance(),
             self._watch_orders(),
-            # self._ping(),
+            self._health_check(),
         ]
 
-    def _message_handler(self, message: str) -> None:
+    def _handler(self, message: str) -> None:
         self.logger.info("Received message: %s", message)
         event = self._deserialize_message(message)
         task = self._get_task(event)
@@ -114,8 +111,7 @@ class Gate:
             "action": EventAction.CREATE_ORDERS,
             "data": orders,
         }
-        message = self.formatter.format(event)
-        await self.core.offer(message, CorePublisher.CORE)
+        self.connector.offer(event)
 
     def _associate_with_event(self, event_id: str, orders: CreateOrdersData) -> None:
         client_order_ids = self._get_client_order_ids(orders)
@@ -146,8 +142,7 @@ class Gate:
             "action": EventAction.GET_ORDERS,
             "data": order,
         }
-        message = self.formatter.format(event)
-        await self.core.offer(message, CorePublisher.CORE)
+        self.connector.offer(event)
 
     async def _get_balance(self, event: Event) -> None:
         if not (assets := event["data"]):
@@ -160,8 +155,7 @@ class Gate:
             "action": EventAction.GET_BALANCE,
             "data": balance,
         }
-        message = self.formatter.format(event)
-        await self.core.offer(message, CorePublisher.BALANCES)
+        self.connector.offer(event)
 
     async def _watch_order_books(self):
         tasks = [self._watch_order_book(symbol, self.depth) for symbol in self.symbols]
@@ -175,13 +169,13 @@ class Gate:
             else:
                 order_book = await self.exchange.fetch_order_book(symbol, limit)
 
+            self.order_books_received += 1
             event: Event = {
                 "event_id": str(uuid.uuid4()),
                 "action": EventAction.ORDER_BOOK_UPDATE,
                 "data": order_book,
             }
-            message = self.formatter.format(event)
-            await self.core.offer(message, CorePublisher.ORDERBOOKS)
+            self.connector.offer(event)
 
     async def _watch_balance(self) -> None:
         while True:
@@ -196,8 +190,7 @@ class Gate:
                 "action": EventAction.BALANCE_UPDATE,
                 "data": balance,
             }
-            message = self.formatter.format(event)
-            await self.core.offer(message, CorePublisher.BALANCES)
+            self.connector.offer(event)
 
     async def _watch_orders(self) -> None:
         while True:
@@ -215,25 +208,24 @@ class Gate:
                     "action": EventAction.ORDERS_UPDATE,
                     "data": order,
                 }
-                message = self.formatter.format(event)
-                await self.core.offer(message, CorePublisher.CORE)
+                self.connector.offer(event)
 
-    # async def _ping(self):
-    #     while True:
-    #         # TODO: Send to log server
-    #         message = await self.formatter.format(
-    #             self.data, EventType.DATA, EventAction.PING
-    #         )
-    #         await asyncio.sleep(self.ping_delay)
-
-    async def _poll(self):
+    async def _health_check(self) -> NoReturn:
         while True:
-            fragments_read = await self.core.poll()
-            await self.idle_strategy.idle(fragments_read)
+            self._ping()
+            await asyncio.sleep(PING_DELAY_IN_SECONDS)
+
+    def _ping(self):
+        event: Event = {
+            "event_id": str(uuid.uuid4()),
+            "action": EventAction.PING,
+            "data": self.order_books_received,
+        }
+        self.connector.offer(event)
 
     async def close(self):
         await self.exchange.close()
-        await self.core.close()
+        await self.connector.close()
 
     async def __aenter__(self):
         return self
