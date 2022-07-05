@@ -1,33 +1,34 @@
 from abc import ABC, abstractmethod
-from .typing import OrderBook, Balance, Order
+from .types import OrderBook, Balance, Order
+from .enums import StructureType
 from .utils import filter_dict, get_timestamp_in_us
 
 
 class Formatter(ABC):
     @abstractmethod
-    def format(self, ccxt_structure: dict):
+    def format(self, structure: dict):
         pass
 
 
-class OrderBookFormatter(Formatter):
+class CcxtOrderBookFormatter(Formatter):
     KEYS = ["symbol", "bids", "asks", "timestamp"]
 
-    def format(self, ccxt_structure: dict) -> OrderBook:
-        order_book = filter_dict(ccxt_structure, self.KEYS)
-        order_book["timestamp"] = get_timestamp_in_us(ccxt_structure)
+    def format(self, structure: dict) -> OrderBook:
+        order_book = filter_dict(structure, self.KEYS)
+        order_book["timestamp"] = get_timestamp_in_us(structure)
         return order_book
 
 
-class BalanceFormatter(Formatter):
+class CcxtBalanceFormatter(Formatter):
     KEYS = ["assets", "timestamp"]
 
-    def format(self, ccxt_structure: dict) -> Balance:
-        balance = filter_dict(ccxt_structure, self.KEYS)
-        balance["timestamp"] = get_timestamp_in_us(ccxt_structure)
+    def format(self, structure: dict) -> Balance:
+        balance = filter_dict(structure, self.KEYS)
+        balance["timestamp"] = get_timestamp_in_us(structure)
         return balance
 
 
-class OrderFormatter(Formatter):
+class CcxtOrderFormatter(Formatter):
     KEYS = [
         "client_order_id",
         "symbol",
@@ -41,24 +42,26 @@ class OrderFormatter(Formatter):
         "timestamp",
     ]
 
-    def format(self, ccxt_structure: dict) -> Order:
-        order = filter_dict(ccxt_structure, self.KEYS)
-        order["timestamp"] = get_timestamp_in_us(ccxt_structure)
+    def format(self, structure: dict) -> Order:
+        order = filter_dict(structure, self.KEYS)
+        order["timestamp"] = get_timestamp_in_us(structure)
         return order
 
 
 class FormatterFactory(ABC):
     @abstractmethod
-    def make_formatter(self, ccxt_structure: dict) -> Formatter:
+    def make_formatter(self, structure_type: StructureType) -> Formatter:
         pass
 
 
-class FormatterFactoryImpl(FormatterFactory):
-    def make_formatter(self, ccxt_structure: dict) -> Formatter:
-        if "bids" in ccxt_structure:
-            return OrderBookFormatter()
-        if "total" in ccxt_structure:
-            return BalanceFormatter()
-        if "id" in ccxt_structure:
-            return OrderFormatter()
-        raise TypeError()
+class CcxtFormatterFactory(FormatterFactory):
+    def make_formatter(self, structure_type: StructureType) -> Formatter:
+        match structure_type:
+            case StructureType.ORDER_BOOK:
+                return CcxtOrderBookFormatter()
+            case StructureType.BALANCE:
+                return CcxtBalanceFormatter()
+            case StructureType.ORDER:
+                return CcxtOrderFormatter()
+            case _:
+                raise TypeError()

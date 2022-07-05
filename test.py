@@ -8,7 +8,7 @@ async def main():
     secret = "tzSP6gSIlSz3IwbKN2UroLCDtyhMSxJQwU3swPJB"
     exchange = Exchange("kuna", {"apiKey": api_key, "secret": secret})
 
-    order_book = await exchange.fetch_order_book("BTC/USDT", 1)
+    orders = await exchange.fetch_order_book("BTC/USDT", 1)
 
     print(order_book)
     await exchange.close()

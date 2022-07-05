@@ -24,3 +24,17 @@ class Order(TypedDict):
     price: float
     amount: float
     filled: float
+
+
+class FetchOrderParams(TypedDict):
+    client_order_id: str
+    symbol: str
+
+
+class CreateOrderParams(TypedDict):
+    client_order_id: str
+    symbol: str
+    type: str
+    side: str
+    amount: float
+    price: float
