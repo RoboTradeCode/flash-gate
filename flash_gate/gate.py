@@ -1,20 +1,14 @@
 import asyncio
 import json
 import logging
-from bidict import bidict
 import uuid
-from .enums import EventAction
-from flash_gate.exchange.exchange import Exchange
-from .typing import (
-    CancelOrdersData,
-    FetchOrderData,
-    Event,
-    CreateOrdersData,
-    GetOrdersData,
-)
 from typing import NoReturn, Coroutine
+from bidict import bidict
 from .connector import AeronConnector
-
+from .enums import EventAction
+from .exchange import CcxtExchange
+from .exchange.types import FetchOrderParams, CreateOrderParams
+from .types import Event
 
 PING_DELAY_IN_SECONDS = 1
 
@@ -26,7 +20,7 @@ class Gate:
         exchange_config = self._get_exchange_config(gate_config)
 
         self.logger = logging.getLogger(__name__)
-        self.exchange = Exchange(exchange_id, exchange_config)
+        self.exchange = CcxtExchange(exchange_id, exchange_config)
         self.connector = AeronConnector(config, self._handler)
 
         self.assets = self._get_assets(config["data"]["assets_labels"])
@@ -101,7 +95,7 @@ class Gate:
 
     async def _create_orders(self, event: Event):
         event_id = event["event_id"]
-        orders: CreateOrdersData = event["data"]
+        orders: list[CreateOrderParams] = event["data"]
 
         self._associate_with_event(event_id, orders)
         orders = await self.exchange.create_orders(orders)
@@ -113,28 +107,30 @@ class Gate:
         }
         self.connector.offer(event)
 
-    def _associate_with_event(self, event_id: str, orders: CreateOrdersData) -> None:
+    def _associate_with_event(
+        self, event_id: str, orders: list[CreateOrderParams]
+    ) -> None:
         client_order_ids = self._get_client_order_ids(orders)
         for client_order_id in client_order_ids:
             self.event_id_by_client_order_id[client_order_id] = event_id
 
     @staticmethod
-    def _get_client_order_ids(orders: CreateOrdersData) -> list[str]:
+    def _get_client_order_ids(orders: list[CreateOrderParams]) -> list[str]:
         return [order["client_order_id"] for order in orders]
 
     async def _cancel_orders(self, event: Event) -> None:
-        orders: CancelOrdersData = event["data"]
+        orders: list[FetchOrderParams] = event["data"]
         await self.exchange.cancel_orders(orders)
 
     async def _cancel_all_orders(self) -> None:
         await self.exchange.cancel_all_orders(self.symbols)
 
     async def _get_orders(self, event: Event) -> None:
-        orders: GetOrdersData = event["data"]
+        orders: list[FetchOrderParams] = event["data"]
         for order in orders:
             await self._get_order(order)
 
-    async def _get_order(self, order: FetchOrderData):
+    async def _get_order(self, order: FetchOrderParams):
         order = await self.exchange.fetch_order(order)
 
         event: Event = {
@@ -148,7 +144,7 @@ class Gate:
         if not (assets := event["data"]):
             assets = self.assets
 
-        balance = await self.exchange.fetch_balance(assets)
+        balance = await self.exchange.fetch_partial_balance(assets)
 
         event: Event = {
             "event_id": event["event_id"],
@@ -181,9 +177,9 @@ class Gate:
         while True:
 
             if self.data_collection_method["balance"] == "websocket":
-                balance = await self.exchange.watch_balance(self.assets)
+                balance = await self.exchange.watch_partial_balance(self.assets)
             else:
-                balance = await self.exchange.fetch_balance(self.assets)
+                balance = await self.exchange.fetch_partial_balance(self.assets)
 
             event: Event = {
                 "event_id": str(uuid.uuid4()),
@@ -198,7 +194,7 @@ class Gate:
             if self.data_collection_method["order"] == "websocket":
                 orders = await self.exchange.watch_orders()
             else:
-                orders = await self.exchange.fetch_orders(self.symbols)
+                orders = await self.exchange.fetch_open_orders(self.symbols)
 
             for order in orders:
                 event: Event = {

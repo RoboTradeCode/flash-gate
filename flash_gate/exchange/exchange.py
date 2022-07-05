@@ -94,85 +94,48 @@ class CcxtExchange(Exchange):
         raise ValueError(f"Unknown client order id: {client_order_id}")
 
     async def fetch_open_orders(self, symbols: list[str]) -> list[Order]:
-        orders_groups = [await self._fetch_open_orders(symbol) for symbol in symbols]
-        orders = list(itertools.chain.from_iterable(orders_groups))
-        return orders
-
-    async def _fetch_open_orders(self, symbol: str) -> list[Order]:
-        raw_orders = await self.exchange.fetch_open_orders(symbol)
+        raw_orders = await self._fetch_open_orders(symbols)
         orders = [self._format(order, StructureType.ORDER) for order in raw_orders]
         return orders
 
     async def watch_orders(self) -> list[Order]:
         raw_orders = await self.exchange.watch_orders()
-        orders = self._format_raw_orders(raw_orders)
+        orders = [self._format(order, StructureType.ORDER) for order in raw_orders]
         return orders
 
     async def create_orders(self, orders: list[CreateOrderParams]) -> list[Order]:
         orders = [await self._create_order(order) for order in orders]
         return orders
 
-    async def _create_order(self, data: CreateOrderParams) -> Order:
+    async def _create_order(self, params: CreateOrderParams) -> Order:
         raw_order = await self.exchange.create_order(
-            data["symbol"],
-            data["type"],
-            data["side"],
-            data["amount"],
-            data["price"],
+            params["symbol"],
+            params["type"],
+            params["side"],
+            params["amount"],
+            params["price"],
         )
-        self.id_by_client_order_id[data["client_order_id"]] = raw_order["id"]
-        order = self._format_raw_order(raw_order, data)
+        self.id_by_client_order_id[params["client_order_id"]] = raw_order["id"]
+        order = self._format(raw_order, StructureType.ORDER)
         return order
 
-    def _format_raw_orders(self, raw_orders: list) -> list[Order]:
-        orders = [self._format_raw_order(raw_order) for raw_order in raw_orders]
-        return orders
-
-    def _format_raw_order(
-        self, raw_order: dict, data: CreateOrderParams = None
-    ) -> Order:
-        # Default argument value is mutable
-        if data is None:
-            data = {}
-
-        order = self._filter_keys(raw_order, self.ORDER_KEYS)
-        order = self._fill_empty_keys(order, data)
-        order["client_order_id"] = self.id_by_client_order_id.inverse[order["id"]]
-        order["timestamp"] = self._convert_ms_to_us(order["timestamp"])
-        return order
-
-    @staticmethod
-    def _filter_keys(dictionary: dict, keys: list[str]) -> dict:
-        return {key: dictionary.get(key) for key in keys}
-
-    @staticmethod
-    def _fill_empty_keys(dictionary: dict, data: dict) -> dict:
-        filled_dict = dictionary.copy()
-        empty_keys = [key for key, value in dictionary.items() if value is None]
-        filled_dict.update((key, data.get(key)) for key in empty_keys)
-        return filled_dict
-
-    @staticmethod
-    def _convert_ms_to_us(ms: int) -> int:
-        return ms * 1000
-
-    async def cancel_orders(self, orders: list[FetchOrderData]) -> None:
+    async def cancel_orders(self, orders: list[FetchOrderParams]) -> None:
         for order in orders:
             await self._cancel_order(order)
 
-    async def _cancel_order(self, order: FetchOrderData) -> None:
+    async def _cancel_order(self, order: FetchOrderParams) -> None:
         order_id = self.id_by_client_order_id[order["client_order_id"]]
         await self.exchange.cancel_order(order_id, order["symbol"])
 
     async def cancel_all_orders(self, symbols: list[str]) -> None:
-        orders = await self._fetch_open_orders(symbols)
-        for order in orders:
-            await self.exchange.cancel_order(order["id"], order["symbol"])
+        raw_orders = await self._fetch_open_orders(symbols)
+        for raw_order in raw_orders:
+            await self.exchange.cancel_order(raw_order["id"], raw_order["symbol"])
 
-    async def _fetch_open_orders(self, symbols: list[str]) -> list:
-        order_groups = [await self.exchange.fetch_open_orders(s) for s in symbols]
-        orders = list(itertools.chain.from_iterable(order_groups))
-        return orders
+    async def _fetch_open_orders(self, symbols: list[str]) -> list[dict]:
+        raw_orders_groups = [await self.exchange.fetch_open_orders(s) for s in symbols]
+        raw_orders = list(itertools.chain.from_iterable(raw_orders_groups))
+        return raw_orders
 
     @staticmethod
     def _format(ccxt_structure: dict, ccxt_structure_type: StructureType):
