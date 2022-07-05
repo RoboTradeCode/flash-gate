@@ -69,7 +69,9 @@ class Gate:
 
     def _deserialize_message(self, message: str) -> Event:
         try:
-            return json.loads(message)
+            event = json.loads(message)
+            self.connector.offer(event, only_log=True)
+            return event
         except json.JSONDecodeError as e:
             self.logger.error("Message deserialize error: %s", e)
 
@@ -171,7 +173,7 @@ class Gate:
                 "action": EventAction.ORDER_BOOK_UPDATE,
                 "data": order_book,
             }
-            self.connector.offer(event)
+            self.connector.offer(event, log=False)
 
     async def _watch_balance(self) -> None:
         while True:
@@ -217,7 +219,7 @@ class Gate:
             "action": EventAction.PING,
             "data": self.order_books_received,
         }
-        self.connector.offer(event)
+        self.connector.offer(event, log=False)
 
     async def close(self):
         await self.exchange.close()

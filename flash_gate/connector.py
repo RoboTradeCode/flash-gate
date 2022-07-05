@@ -33,10 +33,15 @@ class AeronConnector:
         fragments_read = self.subscriber.poll()
         await self.idle_strategy.idle(fragments_read)
 
-    def offer(self, event: Event) -> None:
-        publisher = self._get_publisher(event)
-        message = self.formatter.format(event)
-        self._offer_while_not_successful(publisher, message)
+    def offer(self, event: Event, log=True, only_log=False) -> None:
+        if not only_log:
+            publisher = self._get_publisher(event)
+            message = self.formatter.format(event)
+            self._offer_while_not_successful(publisher, message)
+
+        if log:
+            message = self.formatter.format(event)
+            self._offer_while_not_successful(self.logs, message)
 
     def _get_publisher(self, event: Event) -> Publisher:
         match event["action"]:
