@@ -56,24 +56,24 @@ class CcxtExchange(Exchange):
 
     async def fetch_order_book(self, symbol: str, limit: int) -> OrderBook:
         raw_order_book = await self.exchange.fetch_order_book(symbol, limit)
-        order_book = await self._format(raw_order_book, StructureType.ORDER_BOOK)
+        order_book = self._format(raw_order_book, StructureType.ORDER_BOOK)
         return order_book
 
     async def watch_order_book(self, symbol: str, limit: int) -> OrderBook:
         raw_order_book = await self.exchange.watch_order_book(symbol, limit)
-        order_book = await self._format(raw_order_book, StructureType.ORDER_BOOK)
+        order_book = self._format(raw_order_book, StructureType.ORDER_BOOK)
         return order_book
 
     async def fetch_partial_balance(self, parts: list[str]) -> Balance:
         raw_balance = await self.exchange.fetch_balance()
         raw_partial_balance = self._get_partial_balance(raw_balance, parts)
-        balance = await self._format(raw_partial_balance, StructureType.BALANCE)
+        balance = self._format(raw_partial_balance, StructureType.PARTIAL_BALANCE)
         return balance
 
     async def watch_partial_balance(self, parts: list[str]) -> Balance:
         raw_balance = await self.exchange.watch_balance()
         raw_partial_balance = self._get_partial_balance(raw_balance, parts)
-        balance = await self._format(raw_partial_balance, StructureType.BALANCE)
+        balance = self._format(raw_partial_balance, StructureType.PARTIAL_BALANCE)
         return balance
 
     @staticmethod

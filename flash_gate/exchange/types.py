@@ -9,7 +9,7 @@ class OrderBook(TypedDict):
 
 
 class Balance(TypedDict):
-    assets: list
+    assets: dict
     timestamp: Optional[int]
 
 

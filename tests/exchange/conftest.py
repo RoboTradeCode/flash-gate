@@ -18,7 +18,7 @@ def order_book_formatter(formatter_factory: FormatterFactory) -> Formatter:
 
 @pytest.fixture(scope="session")
 def balance_formatter(formatter_factory: FormatterFactory) -> Formatter:
-    yield formatter_factory.make_formatter(StructureType.BALANCE)
+    yield formatter_factory.make_formatter(StructureType.PARTIAL_BALANCE)
 
 
 @pytest.fixture(scope="session")

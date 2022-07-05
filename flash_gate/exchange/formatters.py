@@ -19,13 +19,9 @@ class CcxtOrderBookFormatter(Formatter):
         return order_book
 
 
-class CcxtBalanceFormatter(Formatter):
-    KEYS = ["assets", "timestamp"]
-
+class CcxtPartialBalanceFormatter(Formatter):
     def format(self, structure: dict) -> Balance:
-        balance = filter_dict(structure, self.KEYS)
-        balance["timestamp"] = get_timestamp_in_us(structure)
-        return balance
+        return {"assets": structure, "timestamp": get_timestamp_in_us(structure)}
 
 
 class CcxtOrderFormatter(Formatter):
@@ -59,8 +55,8 @@ class CcxtFormatterFactory(FormatterFactory):
         match structure_type:
             case StructureType.ORDER_BOOK:
                 return CcxtOrderBookFormatter()
-            case StructureType.BALANCE:
-                return CcxtBalanceFormatter()
+            case StructureType.PARTIAL_BALANCE:
+                return CcxtPartialBalanceFormatter()
             case StructureType.ORDER:
                 return CcxtOrderFormatter()
             case _:
