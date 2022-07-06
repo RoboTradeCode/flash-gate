@@ -5,7 +5,7 @@ import json
 event = {
     "event_id": "0bf733e3-da9b-4516-8288-c34c8d838d29",
     "event": "command",
-    "exchange": "kuna",
+    "exchange": "exmo",
     "node": "core",
     "instance": "test",
     "algo": "multi_3t_php",
@@ -17,7 +17,7 @@ event = {
             "symbol": "BTC/USDT",
             "type": "limit",
             "side": "sell",
-            "amount": 0.000001,
+            "amount": 0.0001,
             "price": 100000,
             "client_order_id": "0fa56216-fb3e-11ec-b939-0242ac120002",
         },

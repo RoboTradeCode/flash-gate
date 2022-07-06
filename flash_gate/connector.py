@@ -69,7 +69,7 @@ class AeronConnector:
                 self.logger.warning(e)
 
     def _offer(self, publisher: Publisher, message: str) -> None:
-        self.logger.info("Offering message: %s", message)
+        # self.logger.info("Offering message: %s", message)
         publisher.offer(message)
 
     def close(self):
