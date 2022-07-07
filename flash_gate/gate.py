@@ -193,20 +193,23 @@ class Gate:
     async def _watch_orders(self) -> None:
         while True:
 
-            if self.data_collection_method["order"] == "websocket":
-                orders = await self.exchange.watch_orders()
-            else:
-                orders = await self.exchange.fetch_open_orders(self.symbols)
+            try:
+                if self.data_collection_method["order"] == "websocket":
+                    orders = await self.exchange.watch_orders()
+                else:
+                    orders = await self.exchange.fetch_open_orders(self.symbols)
 
-            for order in orders:
-                event: Event = {
-                    "event_id": self.event_id_by_client_order_id.get(
-                        order["client_order_id"]
-                    ),
-                    "action": EventAction.ORDERS_UPDATE,
-                    "data": order,
-                }
-                self.connector.offer(event)
+                for order in orders:
+                    event: Event = {
+                        "event_id": self.event_id_by_client_order_id.get(
+                            order["client_order_id"]
+                        ),
+                        "action": EventAction.ORDERS_UPDATE,
+                        "data": order,
+                    }
+                    self.connector.offer(event)
+            except Exception as e:
+                self.logger.error(e)
 
     async def _health_check(self) -> NoReturn:
         while True:
