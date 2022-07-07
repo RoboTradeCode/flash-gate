@@ -23,6 +23,7 @@ ORDER_KEYS = [
     "price",
     "amount",
     "filled",
+    "info",
 ]
 
 
