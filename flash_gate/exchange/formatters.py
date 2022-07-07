@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from .types import OrderBook, Balance, Order
 from .enums import StructureType
+from .types import OrderBook, Balance, Order
 from .utils import filter_dict, get_timestamp_in_us
 
 
@@ -39,7 +39,9 @@ class CcxtOrderFormatter(Formatter):
     ]
 
     def format(self, structure: dict) -> Order:
+        client_order_id = structure["clientOrderId"]
         order = filter_dict(structure, self.KEYS)
+        order["client_order_id"] = client_order_id
         order["timestamp"] = get_timestamp_in_us(structure)
         return order
 

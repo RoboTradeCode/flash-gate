@@ -85,21 +85,19 @@ class CcxtExchange(Exchange):
     async def fetch_order(self, params: FetchOrderParams) -> Order:
         order_id = self._get_id_by_client_order_id(params["client_order_id"])
         raw_order = await self.exchange.fetch_order(order_id, params["symbol"])
+        raw_order = self._update_client_order_id(raw_order)
         order = self._format(raw_order, StructureType.ORDER)
         return order
 
-    async def _get_id_by_client_order_id(self, client_order_id: str) -> str:
-        if order_id := self.id_by_client_order_id.get(client_order_id):
-            return order_id
-        raise ValueError(f"Unknown client order id: {client_order_id}")
-
     async def fetch_open_orders(self, symbols: list[str]) -> list[Order]:
         raw_orders = await self._fetch_open_orders(symbols)
+        raw_orders = [self._update_client_order_id(order) for order in raw_orders]
         orders = [self._format(order, StructureType.ORDER) for order in raw_orders]
         return orders
 
     async def watch_orders(self) -> list[Order]:
         raw_orders = await self.exchange.watch_orders()
+        raw_orders = [self._update_client_order_id(order) for order in raw_orders]
         orders = [self._format(order, StructureType.ORDER) for order in raw_orders]
         return orders
 
@@ -116,8 +114,24 @@ class CcxtExchange(Exchange):
             params["price"],
         )
         self.id_by_client_order_id[params["client_order_id"]] = raw_order["id"]
+        raw_order = self._update_client_order_id(raw_order)
         order = self._format(raw_order, StructureType.ORDER)
         return order
+
+    def _update_client_order_id(self, raw_order: dict) -> dict:
+        raw_order = raw_order.copy()
+        raw_order["clientOrderId"] = self._get_client_order_id_by_id(raw_order["id"])
+        return raw_order
+
+    def _get_id_by_client_order_id(self, client_order_id: str) -> str:
+        if order_id := self.id_by_client_order_id.get(client_order_id):
+            return order_id
+        raise ValueError(f"Unknown client order id: {client_order_id}")
+
+    def _get_client_order_id_by_id(self, order_id: str) -> str:
+        if client_order_id := self.id_by_client_order_id.inverse.get(order_id):
+            return client_order_id
+        raise ValueError(f"Unknown order id: {order_id}")
 
     async def cancel_orders(self, orders: list[FetchOrderParams]) -> None:
         for order in orders:
