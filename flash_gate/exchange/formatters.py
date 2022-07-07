@@ -36,6 +36,7 @@ class CcxtOrderFormatter(Formatter):
         "status",
         "filled",
         "timestamp",
+        "info",
     ]
 
     def format(self, structure: dict) -> Order:
