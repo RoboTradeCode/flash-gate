@@ -205,7 +205,7 @@ class Gate:
                             order["client_order_id"]
                         ),
                         "action": EventAction.ORDERS_UPDATE,
-                        "data": order,
+                        "data": [order],
                     }
                     self.connector.offer(event)
             except Exception as e:
