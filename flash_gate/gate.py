@@ -138,7 +138,7 @@ class Gate:
         event: Event = {
             "event_id": self.event_id_by_client_order_id.get(order["client_order_id"]),
             "action": EventAction.GET_ORDERS,
-            "data": order,
+            "data": [order],
         }
         self.connector.offer(event)
 
