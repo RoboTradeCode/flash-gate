@@ -1,3 +1,4 @@
+import asyncio
 import itertools
 import logging
 from abc import ABC, abstractmethod
@@ -103,28 +104,56 @@ class Exchange(ABC):
 
 
 class CcxtExchange(Exchange):
+    """
+    Класс для взаимодействия с биржей через CCXT
+    """
+
     def __init__(self, exchange_id: str, config: dict):
         self.logger = logging.getLogger()
         self.exchange: ccxtpro.Exchange = getattr(ccxtpro, exchange_id)(config)
         self.id_by_client_order_id = bidict()
 
     async def fetch_order_book(self, symbol: str, limit: int) -> OrderBook:
+        self.logger.debug("Trying to fetch order book: %s", symbol)
+        order_book = await self._fetch_order_book(symbol, limit)
+        self.logger.debug("Order book has been successfully fetched: %s", order_book)
+        return order_book
+
+    async def _fetch_order_book(self, symbol: str, limit: int) -> OrderBook:
         raw_order_book = await self.exchange.fetch_order_book(symbol, limit)
         order_book = self._format(raw_order_book, StructureType.ORDER_BOOK)
         return order_book
 
     async def watch_order_book(self, symbol: str, limit: int) -> OrderBook:
+        self.logger.debug("Trying to watch order book: %s", symbol)
+        order_book = await self._watch_order_book(symbol, limit)
+        self.logger.debug("Order book has been successfully watched: %s", order_book)
+        return order_book
+
+    async def _watch_order_book(self, symbol: str, limit: int) -> OrderBook:
         raw_order_book = await self.exchange.watch_order_book(symbol, limit)
         order_book = self._format(raw_order_book, StructureType.ORDER_BOOK)
         return order_book
 
     async def fetch_partial_balance(self, parts: list[str]) -> Balance:
+        self.logger.debug("Trying to fetch partial balance: %s", parts)
+        balance = await self._fetch_partial_balance(parts)
+        self.logger.info("Partial balance has been successfully fetched: %s", balance)
+        return balance
+
+    async def _fetch_partial_balance(self, parts: list[str]) -> Balance:
         raw_balance = await self.exchange.fetch_balance()
         raw_partial_balance = self._get_partial_balance(raw_balance, parts)
         balance = self._format(raw_partial_balance, StructureType.PARTIAL_BALANCE)
         return balance
 
     async def watch_partial_balance(self, parts: list[str]) -> Balance:
+        self.logger.debug("Trying to watch partial balance: %s", parts)
+        balance = await self._watch_partial_balance(parts)
+        self.logger.info("Partial balance has been successfully watched: %s", balance)
+        return balance
+
+    async def _watch_partial_balance(self, parts: list[str]) -> Balance:
         raw_balance = await self.exchange.watch_balance()
         raw_partial_balance = self._get_partial_balance(raw_balance, parts)
         balance = self._format(raw_partial_balance, StructureType.PARTIAL_BALANCE)
@@ -137,6 +166,12 @@ class CcxtExchange(Exchange):
         return partial_balance
 
     async def fetch_order(self, params: FetchOrderParams) -> Order:
+        self.logger.debug("Trying to fetch order: %s", params)
+        order = await self._fetch_order(params)
+        self.logger.info("Order has been successfully fetched: %s", order)
+        return order
+
+    async def _fetch_order(self, params: FetchOrderParams) -> Order:
         order_id = self._get_id_by_client_order_id(params["client_order_id"])
         raw_order = await self.exchange.fetch_order(order_id, params["symbol"])
         raw_order = self._update_client_order_id(raw_order)
@@ -144,19 +179,39 @@ class CcxtExchange(Exchange):
         return order
 
     async def fetch_open_orders(self, symbols: list[str]) -> list[Order]:
-        raw_orders = await self._fetch_open_orders(symbols)
+        self.logger.debug("Trying to fetch open orders: %s", symbols)
+        orders = await self._fetch_open_orders(symbols)
+        self.logger.info("Open orders has been successfully fetched: %s", orders)
+        return orders
+
+    async def _fetch_open_orders(self, symbols: list[str]) -> list[Order]:
+        raw_orders = await self._fetch_raw_open_orders(symbols)
         raw_orders = [self._update_client_order_id(order) for order in raw_orders]
         orders = [self._format(order, StructureType.ORDER) for order in raw_orders]
         return orders
 
     async def watch_orders(self) -> list[Order]:
+        self.logger.debug("Trying to watch orders")
+        orders = await self._watch_orders()
+        self.logger.info("Orders has been successfully watched: %s", orders)
+        return orders
+
+    async def _watch_orders(self) -> list[Order]:
         raw_orders = await self.exchange.watch_orders()
         raw_orders = [self._update_client_order_id(order) for order in raw_orders]
         orders = [self._format(order, StructureType.ORDER) for order in raw_orders]
         return orders
 
     async def create_orders(self, orders: list[CreateOrderParams]) -> list[Order]:
-        orders = [await self._create_order(order) for order in orders]
+        self.logger.debug("Trying to create orders: %s", orders)
+        orders = await self._create_orders(orders)
+        self.logger.info("Orders has been successfully created: %s", orders)
+        return orders
+
+    async def _create_orders(self, orders: list[CreateOrderParams]) -> list[Order]:
+        coroutines = [self._create_order(order) for order in orders]
+        orders = await asyncio.gather(*coroutines)
+        # noinspection PyTypeChecker
         return orders
 
     async def _create_order(self, params: CreateOrderParams) -> Order:
@@ -188,6 +243,11 @@ class CcxtExchange(Exchange):
         raise ValueError(f"Unknown order id: {order_id}")
 
     async def cancel_orders(self, orders: list[FetchOrderParams]) -> None:
+        self.logger.debug("Trying to cancel orders: %s", orders)
+        await self._cancel_orders(orders)
+        self.logger.info("Orders has been successfully cancelled")
+
+    async def _cancel_orders(self, orders: list[FetchOrderParams]) -> None:
         for order in orders:
             await self._cancel_order(order)
 
@@ -196,12 +256,18 @@ class CcxtExchange(Exchange):
         await self.exchange.cancel_order(order_id, order["symbol"])
 
     async def cancel_all_orders(self, symbols: list[str]) -> None:
-        raw_orders = await self._fetch_open_orders(symbols)
+        self.logger.debug("Trying to cancel all orders: %s", symbols)
+        await self.cancel_all_orders(symbols)
+        self.logger.info("All orders has been successfully cancelled")
+
+    async def _cancel_all_orders(self, symbols: list[str]) -> None:
+        raw_orders = await self._fetch_raw_open_orders(symbols)
         for raw_order in raw_orders:
             await self.exchange.cancel_order(raw_order["id"], raw_order["symbol"])
 
-    async def _fetch_open_orders(self, symbols: list[str]) -> list[dict]:
-        raw_orders_groups = [await self.exchange.fetch_open_orders(s) for s in symbols]
+    async def _fetch_raw_open_orders(self, symbols: list[str]) -> list[dict]:
+        coroutines = [self.exchange.fetch_open_orders(symbol) for symbol in symbols]
+        raw_orders_groups = asyncio.gather(*coroutines)
         raw_orders = list(itertools.chain.from_iterable(raw_orders_groups))
         return raw_orders
 
@@ -213,4 +279,7 @@ class CcxtExchange(Exchange):
         return structure
 
     async def close(self) -> None:
+        """
+        Закрыть соединение с биржей
+        """
         await self.exchange.close()
