@@ -1,6 +1,14 @@
 from typing import Any
 from typing import TypedDict
-from .enums import EventType, EventAction, EventNode
+from flash_gate.gate.enums import EventType, EventAction, EventNode
+
+
+class Config(TypedDict):
+    exchange_id: str
+    exchange_config: dict
+    assets: list[str]
+    symbols: list[str]
+    limit: list[str]
 
 
 class Message(TypedDict):

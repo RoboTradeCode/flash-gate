@@ -15,12 +15,11 @@ async def main():
 
     ini = ConfigParser()
     ini.read(CONFIG_FILENAME)
-    configurator_driver_type = ini.get("configurator", "type")
-    configurator_source = ini.get("configurator", "source")
+    configurator_driver_type = ini.get("configuration", "type")
+    configurator_source = ini.get("configuration", "source")
 
+    # noinspection PyTypeChecker
     configurator = Configurator(configurator_driver_type, configurator_source)
-    config = configurator.get_config()
-
     config = await configurator.get_config()
 
     async with Gate(config) as gate:

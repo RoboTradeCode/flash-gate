@@ -4,55 +4,44 @@ import logging
 import uuid
 from typing import NoReturn, Coroutine
 from bidict import bidict
-from flash_gate.connector import AeronConnector
-from flash_gate.enums import EventAction
 from flash_gate.exchange import CcxtExchange
 from flash_gate.exchange.types import FetchOrderParams, CreateOrderParams
-from flash_gate.types import Event
+from flash_gate.gate.connector import AeronConnector
+from flash_gate.gate.enums import EventAction
+from flash_gate.gate.types import Event
+from .parsers import ConfigParser
 
 PING_DELAY_IN_SECONDS = 1
 
 
 class Gate:
+    """
+    Шлюз, принимающий команды от торгового ядра и выполняющий их на бирже
+    """
+
     def __init__(self, config: dict):
-        gate_config = config["data"]["configs"]["gate_config"]
-        exchange_id = gate_config["exchange"]["exchange_id"]
-        exchange_config = self._get_exchange_config(gate_config)
+        config_parser = ConfigParser(config)
+        exchange_id = config_parser.exchange_id
+        exchange_config = config_parser.exchange_config
 
         self.logger = logging.getLogger(__name__)
         self.exchange = CcxtExchange(exchange_id, exchange_config)
         self.connector = AeronConnector(config, self._handler)
 
-        self.assets = self._get_assets(config["data"]["assets_labels"])
-        self.symbols = self._get_symbols(config["data"]["markets"])
-        self.depth: int = gate_config["gate"]["order_book_depth"]
-        self.data_collection_method = gate_config["data_collection_method"]
+        self.data_collection_method = config_parser.data_collection_method
+        self.subscribe_delay = config_parser.subscribe_timeout
+        self.tickers = config_parser.tickers
+        self.order_book_limit = config_parser.order_book_limit
+        self.assets = config_parser.assets
 
         self.event_id_by_client_order_id = bidict()
         self.order_books_received = 0
 
-    @staticmethod
-    def _get_exchange_config(gate_config: dict) -> dict:
-        return {
-            "apiKey": gate_config["exchange"]["credentials"]["api_key"],
-            "secret": gate_config["exchange"]["credentials"]["secret_key"],
-            "password": gate_config["exchange"]["credentials"]["password"],
-            "enableRateLimit": gate_config["rate_limits"]["enable_ccxt_rate_limiter"],
-        }
-
-    @staticmethod
-    def _get_assets(assets_labels: list) -> list[str]:
-        return [asset_label["common"] for asset_label in assets_labels]
-
-    @staticmethod
-    def _get_symbols(markets: list) -> list[str]:
-        return [market["common_symbol"] for market in markets]
-
     async def run(self) -> NoReturn:
-        tasks = self._get_background_tasks()
+        tasks = self._get_periodical_tasks()
         await asyncio.gather(*tasks)
 
-    def _get_background_tasks(self) -> list[Coroutine]:
+    def _get_periodical_tasks(self) -> list[Coroutine]:
         return [
             self.connector.run(),
             self._watch_order_books(),
@@ -125,7 +114,7 @@ class Gate:
         await self.exchange.cancel_orders(orders)
 
     async def _cancel_all_orders(self) -> None:
-        await self.exchange.cancel_all_orders(self.symbols)
+        await self.exchange.cancel_all_orders(self.tickers)
 
     async def _get_orders(self, event: Event) -> None:
         orders: list[FetchOrderParams] = event["data"]
@@ -156,7 +145,10 @@ class Gate:
         self.connector.offer(event)
 
     async def _watch_order_books(self):
-        tasks = [self._watch_order_book(symbol, self.depth) for symbol in self.symbols]
+        tasks = [
+            self._watch_order_book(symbol, self.order_book_limit)
+            for symbol in self.tickers
+        ]
         await asyncio.gather(*tasks)
 
     async def _watch_order_book(self, symbol, limit):
@@ -197,7 +189,7 @@ class Gate:
                 if self.data_collection_method["order"] == "websocket":
                     orders = await self.exchange.watch_orders()
                 else:
-                    orders = await self.exchange.fetch_open_orders(self.symbols)
+                    orders = await self.exchange.fetch_open_orders(self.tickers)
 
                 for order in orders:
                     event: Event = {

@@ -109,7 +109,7 @@ class CcxtExchange(Exchange):
     """
 
     def __init__(self, exchange_id: str, config: dict):
-        self.logger = logging.getLogger()
+        self.logger = logging.getLogger(__name__)
         self.exchange: ccxtpro.Exchange = getattr(ccxtpro, exchange_id)(config)
         self.id_by_client_order_id = bidict()
 
@@ -210,7 +210,7 @@ class CcxtExchange(Exchange):
 
     async def _create_orders(self, orders: list[CreateOrderParams]) -> list[Order]:
         coroutines = [self._create_order(order) for order in orders]
-        orders = await asyncio.gather(*coroutines)
+        orders = await asyncio.gather(*coroutines, return_exceptions=True)
         # noinspection PyTypeChecker
         return orders
 
@@ -267,7 +267,7 @@ class CcxtExchange(Exchange):
 
     async def _fetch_raw_open_orders(self, symbols: list[str]) -> list[dict]:
         coroutines = [self.exchange.fetch_open_orders(symbol) for symbol in symbols]
-        raw_orders_groups = asyncio.gather(*coroutines)
+        raw_orders_groups = await asyncio.gather(*coroutines, return_exceptions=True)
         raw_orders = list(itertools.chain.from_iterable(raw_orders_groups))
         return raw_orders
 

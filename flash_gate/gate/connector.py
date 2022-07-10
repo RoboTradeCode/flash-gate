@@ -1,14 +1,15 @@
-from .types import Event, EventAction
+from flash_gate.gate.types import Event, EventAction
 from aeron import Publisher, Subscriber
 from aeron.concurrent import AsyncSleepingIdleStrategy
 import aeron
 from typing import Callable, NoReturn
-from .formatters import JsonFormatter
+from flash_gate.gate.formatters import JsonFormatter
 import logging
 
 IDLE_SLEEP_MS = 1
 
 
+# TODO: Демон дух сложности попал в код и очень опасная ситуация!
 class AeronConnector:
     def __init__(self, config: dict, handler: Callable[[str], None]):
         aeron_config: dict = config["data"]["configs"]["gate_config"]["aeron"]

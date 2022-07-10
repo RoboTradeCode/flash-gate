@@ -2,7 +2,7 @@ import logging
 from typing import Callable
 import aeron
 from aeron import Subscriber, Publisher
-from .enums import CorePublisher
+from flash_gate.gate.enums import CorePublisher
 
 
 class Core:
