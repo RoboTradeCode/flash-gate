@@ -38,9 +38,14 @@ class ConfigParser:
         return data_collection_method
 
     @property
-    def subscribe_timeout(self) -> int:
-        subscribe_timeout = self._rate_limits["subscribe_timeout"]
-        return subscribe_timeout
+    def subscribe_delay(self) -> int:
+        subscribe_delay = self._rate_limits["subscribe_timeout"]
+        return subscribe_delay
+
+    @property
+    def fetch_delays(self) -> dict:
+        fetch_delays = self._rate_limits["api_request_timeouts"]
+        return fetch_delays
 
     @property
     def tickers(self) -> list[str]:

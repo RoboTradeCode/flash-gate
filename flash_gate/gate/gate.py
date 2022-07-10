@@ -14,6 +14,7 @@ from .parsers import ConfigParser
 PING_DELAY_IN_SECONDS = 1
 
 
+# TODO: Демон дух сложности попал в код и очень опасная ситуация!
 class Gate:
     """
     Шлюз, принимающий команды от торгового ядра и выполняющий их на бирже
@@ -29,7 +30,8 @@ class Gate:
         self.connector = AeronConnector(config, self._handler)
 
         self.data_collection_method = config_parser.data_collection_method
-        self.subscribe_delay = config_parser.subscribe_timeout
+        self.subscribe_delay = config_parser.subscribe_delay
+        self.fetch_delays = config_parser.fetch_delays
         self.tickers = config_parser.tickers
         self.order_book_limit = config_parser.order_book_limit
         self.assets = config_parser.assets
@@ -152,12 +154,14 @@ class Gate:
         await asyncio.gather(*tasks)
 
     async def _watch_order_book(self, symbol, limit):
+        await asyncio.sleep(self.subscribe_delay)
         while True:
 
             if self.data_collection_method["order_book"] == "websocket":
                 order_book = await self.exchange.watch_order_book(symbol, limit)
             else:
                 order_book = await self.exchange.fetch_order_book(symbol, limit)
+                await asyncio.sleep(self.fetch_delays["order_book"])
 
             self.order_books_received += 1
             event: Event = {
@@ -174,6 +178,7 @@ class Gate:
                 balance = await self.exchange.watch_partial_balance(self.assets)
             else:
                 balance = await self.exchange.fetch_partial_balance(self.assets)
+                await asyncio.sleep(self.fetch_delays["balance"])
 
             event: Event = {
                 "event_id": str(uuid.uuid4()),
@@ -190,6 +195,7 @@ class Gate:
                     orders = await self.exchange.watch_orders()
                 else:
                     orders = await self.exchange.fetch_open_orders(self.tickers)
+                    await asyncio.sleep(self.fetch_delays["order"])
 
                 for order in orders:
                     event: Event = {
