@@ -1,1 +1,1 @@
-from .exchange import CcxtExchange
+from .exchanges import CcxtExchange

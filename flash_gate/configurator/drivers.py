@@ -27,6 +27,7 @@ class DriverFactory(ABC):
     def make_driver(self, driver_type: DriverType) -> Driver:
         """
         Создать экземпляр драйвера
+
         :param driver_type: Тип используемого драйвера
         """
         ...

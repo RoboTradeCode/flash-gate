@@ -9,42 +9,96 @@ from .types import OrderBook, Balance, Order, FetchOrderParams, CreateOrderParam
 
 
 class Exchange(ABC):
+    """
+    Класс для взаимодействия с биржей
+    """
+
     @abstractmethod
     async def fetch_order_book(self, symbol: str, limit: str) -> OrderBook:
+        """
+        Получить биржевой стакан по HTTP
+
+        :param symbol: Тикер
+        :param limit: Предельное количество предложений
+        """
         ...
 
     @abstractmethod
     async def watch_order_book(self, symbol: str, limit: str) -> OrderBook:
+        """
+        Получить биржевой стакан по WS
+
+        :param symbol: Тикер
+        :param limit: Предельное количество предложений
+        """
         ...
 
     @abstractmethod
     async def fetch_partial_balance(self, parts: list[str]) -> Balance:
+        """
+        Получить баланс тикеров по HTTP
+
+        :param parts: Список тикеров
+        """
         ...
 
     @abstractmethod
     async def watch_partial_balance(self, parts: list[str]) -> Balance:
+        """
+        Получить баланс тикеров по WS
+
+        :param parts: Список тикеров
+        """
         ...
 
     @abstractmethod
     async def fetch_order(self, params: FetchOrderParams) -> Order:
+        """
+        Получить ордер по HTTP
+
+        :param params: Параметры ордера
+        """
         ...
 
     async def watch_orders(self) -> list[Order]:
+        """
+        Получить обновление ордеров по WS
+        """
         ...
 
     @abstractmethod
     async def fetch_open_orders(self, symbols: list[str]) -> list[Order]:
+        """
+        Получить открытые ордера по HTTP
+
+        :param symbols: Список тикеров
+        """
         ...
 
     async def create_orders(self, orders: list[CreateOrderParams]) -> list[Order]:
+        """
+        Создать ордера
+
+        :param orders: Список параметров ордеров
+        """
         ...
 
     @abstractmethod
     async def cancel_all_orders(self, symbols: list[str]) -> list[Order]:
+        """
+        Отменить все открытые ордера
+
+        :param symbols: Список тикеров
+        """
         ...
 
     @abstractmethod
     async def cancel_orders(self, orders: list[FetchOrderParams]) -> list[Order]:
+        """
+        Отменить ордер
+
+        :param orders: Параметры ордера
+        """
         ...
 
 
