@@ -10,6 +10,12 @@ class Formatter(ABC):
         pass
 
 
+class FormatterFactory(ABC):
+    @abstractmethod
+    def make_formatter(self, structure_type: StructureType) -> Formatter:
+        pass
+
+
 class CcxtOrderBookFormatter(Formatter):
     KEYS = ["symbol", "bids", "asks", "timestamp"]
 
@@ -47,12 +53,6 @@ class CcxtOrderFormatter(Formatter):
         return order
 
 
-class FormatterFactory(ABC):
-    @abstractmethod
-    def make_formatter(self, structure_type: StructureType) -> Formatter:
-        pass
-
-
 class CcxtFormatterFactory(FormatterFactory):
     def make_formatter(self, structure_type: StructureType) -> Formatter:
         match structure_type:
@@ -63,4 +63,4 @@ class CcxtFormatterFactory(FormatterFactory):
             case StructureType.ORDER:
                 return CcxtOrderFormatter()
             case _:
-                raise TypeError()
+                raise ValueError(f"Invalid structure type: {structure_type}")

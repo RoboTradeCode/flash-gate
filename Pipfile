@@ -9,6 +9,7 @@ aiohttp = "*"
 ccxtpro = {subdirectory = "python", git = "ssh://git@github.com/kroitor/ccxt.pro.git"}
 pyyaml = "*"
 bidict = "*"
+aiofiles = "*"
 
 [dev-packages]
 pytest = "*"

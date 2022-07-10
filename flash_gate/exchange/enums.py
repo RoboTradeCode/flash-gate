@@ -1,8 +1,11 @@
-from enum import Enum, auto
+from enum import Enum
 
 
-# noinspection PyArgumentList
-class StructureType(Enum):
-    ORDER_BOOK = auto()
-    PARTIAL_BALANCE = auto()
-    ORDER = auto()
+class StructureType(str, Enum):
+    """
+    Тип структуры
+    """
+
+    ORDER_BOOK = "order_book"
+    PARTIAL_BALANCE = "partial_balance"
+    ORDER = "order"

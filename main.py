@@ -15,9 +15,13 @@ async def main():
 
     ini = ConfigParser()
     ini.read(CONFIG_FILENAME)
+    configurator_driver_type = ini.get("configurator", "type")
+    configurator_source = ini.get("configurator", "source")
 
-    async with Configurator(ini) as configurator:
-        config = await configurator.get_config()
+    configurator = Configurator(configurator_driver_type, configurator_source)
+    config = configurator.get_config()
+
+    config = await configurator.get_config()
 
     async with Gate(config) as gate:
         await gate.run()

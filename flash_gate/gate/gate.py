@@ -4,11 +4,11 @@ import logging
 import uuid
 from typing import NoReturn, Coroutine
 from bidict import bidict
-from .connector import AeronConnector
-from .enums import EventAction
-from .exchange import CcxtExchange
-from .exchange.types import FetchOrderParams, CreateOrderParams
-from .types import Event
+from flash_gate.connector import AeronConnector
+from flash_gate.enums import EventAction
+from flash_gate.exchange import CcxtExchange
+from flash_gate.exchange.types import FetchOrderParams, CreateOrderParams
+from flash_gate.types import Event
 
 PING_DELAY_IN_SECONDS = 1
 

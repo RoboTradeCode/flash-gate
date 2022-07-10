@@ -7,14 +7,10 @@ async def main():
     secret = "tzSP6gSIlSz3IwbKN2UroLCDtyhMSxJQwU3swPJB"
     exchange = kuna({"apiKey": api_key, "secret": secret})
 
-    # order = await exchange.create_order("BTC/USDT", "limit", "sell", 0.000001, 100000)
-    # print(order)
-    # orders = await exchange.fetch_open_orders("BTC/USDT")
-    # print(orders)
-    # await exchange.cancel_order(order["id"], order["symbol"])
-
-    balance = await exchange.fetch_order_book("BTC/USDT")
-    print(balance)
+    order = await exchange.create_order(
+        "BTC/USDT", "market", "sell", 100000000000, 100000
+    )
+    print(order)
 
     await exchange.close()
 

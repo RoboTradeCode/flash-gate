@@ -15,7 +15,7 @@ event = {
     "data": [
         {
             "symbol": "BTC/USDT",
-            "type": "limit",
+            "type": "market",
             "side": "sell",
             "amount": 0.0001,
             "price": 100000,
