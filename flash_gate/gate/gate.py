@@ -27,7 +27,7 @@ class Gate:
 
         self.logger = logging.getLogger(__name__)
         self.exchange = CcxtExchange(exchange_id, exchange_config)
-        self.transmitter = AeronTransmitter(self._handler, config[""])
+        self.transmitter = AeronTransmitter(self._handler, config)
 
         self.data_collection_method = config_parser.data_collection_method
         self.subscribe_delay = config_parser.subscribe_delay

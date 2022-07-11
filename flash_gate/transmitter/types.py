@@ -2,11 +2,6 @@ from typing import TypedDict, Any
 from .enums import EventType, EventNode, EventAction
 
 
-class AeronConfig(TypedDict):
-    publishers: dict
-    subscribers: dict
-
-
 class Event(TypedDict, total=False):
     event_id: str
     event: EventType

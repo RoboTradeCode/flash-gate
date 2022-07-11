@@ -4,7 +4,7 @@ import aeron
 from aeron import Publisher, Subscriber
 from aeron.concurrent import AsyncSleepingIdleStrategy
 from .formatters import JsonFormatter
-from .types import AeronConfig, Event
+from .types import Event
 from .enums import Destination
 
 
@@ -12,9 +12,10 @@ IDLE_SLEEP_MS = 1
 
 
 class AeronTransmitter:
-    def __init__(self, handler: Callable[[str], None], config: AeronConfig):
-        subscribers = config["subscribers"]
-        publishers = config["publishers"]
+    def __init__(self, handler: Callable[[str], None], config: dict):
+        aeron_config = config["data"]["configs"]["gate_config"]["aeron"]
+        subscribers = aeron_config["subscribers"]
+        publishers = aeron_config["publishers"]
 
         self.logger = logging.getLogger(__name__)
         self.formatter = JsonFormatter(config)
