@@ -211,10 +211,12 @@ class CcxtExchange(Exchange):
     async def _create_orders(self, orders: list[CreateOrderParams]) -> list[Order]:
         coroutines = [self._create_order(order) for order in orders]
         orders = await asyncio.gather(*coroutines)
+        self.logger.warning(orders)
         # noinspection PyTypeChecker
         return orders
 
     async def _create_order(self, params: CreateOrderParams) -> Order:
+        self.logger.info("Trying to create order: %s", params)
         raw_order = await self.exchange.create_order(
             params["symbol"],
             params["type"],
@@ -225,6 +227,7 @@ class CcxtExchange(Exchange):
         self.id_by_client_order_id[params["client_order_id"]] = raw_order["id"]
         raw_order = self._update_client_order_id(raw_order)
         order = self._format(raw_order, StructureType.ORDER)
+        self.logger.info("Order has been successfully created: %s", order)
         return order
 
     def _update_client_order_id(self, raw_order: dict) -> dict:
@@ -267,7 +270,7 @@ class CcxtExchange(Exchange):
 
     async def _fetch_raw_open_orders(self, symbols: list[str]) -> list[dict]:
         coroutines = [self.exchange.fetch_open_orders(symbol) for symbol in symbols]
-        raw_orders_groups = await asyncio.gather(*coroutines)
+        raw_orders_groups = await asyncio.gather(*coroutines, return_exceptions=True)
         raw_orders = list(itertools.chain.from_iterable(raw_orders_groups))
         return raw_orders
 

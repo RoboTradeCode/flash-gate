@@ -14,10 +14,10 @@ event = {
     "timestamp": 1502962946216000,
     "data": [
         {
-            "symbol": "BTC/USDT",
+            "symbol": "ETH/USDT",
             "type": "market",
             "side": "sell",
-            "amount": 0.0001,
+            "amount": 0.001,
             "price": 100000,
             "client_order_id": "0fa56216-fb3e-11ec-b939-0242ac120003",
         },

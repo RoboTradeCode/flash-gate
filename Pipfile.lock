@@ -154,7 +154,7 @@
         },
         "ccxtpro": {
             "git": "ssh://git@github.com/kroitor/ccxt.pro.git",
-            "ref": "5d1b646aa1acb77e0b8c8fee52fe3b9ba950556e",
+            "ref": "efe0e27d198c855ad118d48e51ae2de7c013075b",
             "subdirectory": "python"
         },
         "certifi": {

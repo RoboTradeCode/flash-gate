@@ -46,10 +46,10 @@ class Gate:
     def _get_periodical_tasks(self) -> list[Coroutine]:
         return [
             self.transmitter.run(),
-            self._watch_order_books(),
-            self._watch_balance(),
-            self._watch_orders(),
-            self._health_check(),
+            # self._watch_order_books(),
+            # self._watch_balance(),
+            # self._watch_orders(),
+            # self._health_check(),
         ]
 
     def _handler(self, message: str) -> None:
@@ -65,7 +65,7 @@ class Gate:
             event_to_log["node"] = "gate"
             self.transmitter.offer(event, Destination.LOGS)
             return event
-        except json.JSONDecodeError as e:
+        except Exception as e:
             self.logger.error("Message deserialize error: %s", e)
 
     def _get_task(self, event: Event) -> Coroutine:
@@ -89,19 +89,22 @@ class Gate:
                 return asyncio.sleep(0)
 
     async def _create_orders(self, event: Event):
-        event_id = event["event_id"]
-        orders: list[CreateOrderParams] = event["data"]
+        try:
+            event_id = event["event_id"]
+            orders: list[CreateOrderParams] = event["data"]
 
-        self._associate_with_event(event_id, orders)
-        orders = await self.exchange.create_orders(orders)
+            self._associate_with_event(event_id, orders)
+            orders = await self.exchange.create_orders(orders)
 
-        event: Event = {
-            "event_id": event_id,
-            "action": EventAction.CREATE_ORDERS,
-            "data": orders,
-        }
-        self.transmitter.offer(event, Destination.CORE)
-        self.transmitter.offer(event, Destination.LOGS)
+            event: Event = {
+                "event_id": event_id,
+                "action": EventAction.CREATE_ORDERS,
+                "data": orders,
+            }
+            self.transmitter.offer(event, Destination.CORE)
+            self.transmitter.offer(event, Destination.LOGS)
+        except Exception as e:
+            self.logger.error(e)
 
     def _associate_with_event(
         self, event_id: str, orders: list[CreateOrderParams]
