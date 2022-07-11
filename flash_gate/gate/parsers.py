@@ -33,6 +33,14 @@ class ConfigParser:
         return exchange_config
 
     @property
+    def aeron_config(self) -> dict:
+        aeron_config: dict = self._gate_config["aeron"]
+        # После добавления поля решили, что отсутствие подписчика не является ошибкой
+        # Следовательно логирование этой ситуации остаётся на усмотрение разработчика
+        aeron_config.pop("no_subscriber_log_delay")
+        return aeron_config
+
+    @property
     def data_collection_method(self) -> dict:
         data_collection_method = self._gate_config["data_collection_method"]
         return data_collection_method

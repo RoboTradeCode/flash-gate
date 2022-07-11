@@ -114,9 +114,9 @@ class CcxtExchange(Exchange):
         self.id_by_client_order_id = bidict()
 
     async def fetch_order_book(self, symbol: str, limit: int) -> OrderBook:
-        self.logger.debug("Trying to fetch order book: %s", symbol)
+        self.logger.info("Trying to fetch order book: %s", symbol)
         order_book = await self._fetch_order_book(symbol, limit)
-        self.logger.debug("Order book has been successfully fetched: %s", order_book)
+        self.logger.info("Order book has been successfully fetched: %s", order_book)
         return order_book
 
     async def _fetch_order_book(self, symbol: str, limit: int) -> OrderBook:
@@ -136,7 +136,7 @@ class CcxtExchange(Exchange):
         return order_book
 
     async def fetch_partial_balance(self, parts: list[str]) -> Balance:
-        self.logger.debug("Trying to fetch partial balance: %s", parts)
+        self.logger.info("Trying to fetch partial balance: %s", parts)
         balance = await self._fetch_partial_balance(parts)
         self.logger.info("Partial balance has been successfully fetched: %s", balance)
         return balance
@@ -148,7 +148,7 @@ class CcxtExchange(Exchange):
         return balance
 
     async def watch_partial_balance(self, parts: list[str]) -> Balance:
-        self.logger.debug("Trying to watch partial balance: %s", parts)
+        self.logger.info("Trying to watch partial balance: %s", parts)
         balance = await self._watch_partial_balance(parts)
         self.logger.info("Partial balance has been successfully watched: %s", balance)
         return balance
@@ -166,7 +166,7 @@ class CcxtExchange(Exchange):
         return partial_balance
 
     async def fetch_order(self, params: FetchOrderParams) -> Order:
-        self.logger.debug("Trying to fetch order: %s", params)
+        self.logger.info("Trying to fetch order: %s", params)
         order = await self._fetch_order(params)
         self.logger.info("Order has been successfully fetched: %s", order)
         return order
@@ -179,7 +179,7 @@ class CcxtExchange(Exchange):
         return order
 
     async def fetch_open_orders(self, symbols: list[str]) -> list[Order]:
-        self.logger.debug("Trying to fetch open orders: %s", symbols)
+        self.logger.info("Trying to fetch open orders: %s", symbols)
         orders = await self._fetch_open_orders(symbols)
         self.logger.info("Open orders has been successfully fetched: %s", orders)
         return orders
@@ -191,7 +191,7 @@ class CcxtExchange(Exchange):
         return orders
 
     async def watch_orders(self) -> list[Order]:
-        self.logger.debug("Trying to watch orders")
+        self.logger.info("Trying to watch orders")
         orders = await self._watch_orders()
         self.logger.info("Orders has been successfully watched: %s", orders)
         return orders
@@ -203,7 +203,7 @@ class CcxtExchange(Exchange):
         return orders
 
     async def create_orders(self, orders: list[CreateOrderParams]) -> list[Order]:
-        self.logger.debug("Trying to create orders: %s", orders)
+        self.logger.info("Trying to create orders: %s", orders)
         orders = await self._create_orders(orders)
         self.logger.info("Orders has been successfully created: %s", orders)
         return orders
@@ -243,7 +243,7 @@ class CcxtExchange(Exchange):
         raise ValueError(f"Unknown order id: {order_id}")
 
     async def cancel_orders(self, orders: list[FetchOrderParams]) -> None:
-        self.logger.debug("Trying to cancel orders: %s", orders)
+        self.logger.info("Trying to cancel orders: %s", orders)
         await self._cancel_orders(orders)
         self.logger.info("Orders has been successfully cancelled")
 
@@ -256,7 +256,7 @@ class CcxtExchange(Exchange):
         await self.exchange.cancel_order(order_id, order["symbol"])
 
     async def cancel_all_orders(self, symbols: list[str]) -> None:
-        self.logger.debug("Trying to cancel all orders: %s", symbols)
+        self.logger.info("Trying to cancel all orders: %s", symbols)
         await self.cancel_all_orders(symbols)
         self.logger.info("All orders has been successfully cancelled")
 

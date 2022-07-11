@@ -15,7 +15,7 @@ event = {
     "data": [
         {
             "symbol": "BTC/USDT",
-            "client_order_id": "0fa56216-fb3e-11ec-b939-0242ac120002",
+            "client_order_id": "0fa56216-fb3e-11ec-b939-0242ac120003",
         },
     ],
 }

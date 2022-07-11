@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
-from flash_gate.gate.types import Event
-from flash_gate.gate.enums import EventType
+from .types import Event
+from .enums import EventType
 
 
 class JsonFormatter:

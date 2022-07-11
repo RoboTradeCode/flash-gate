@@ -24,7 +24,8 @@ class EventAction(str, Enum):
     PING = "ping"
 
 
-class CorePublisher(Enum):
-    ORDERBOOKS = 1
-    BALANCES = 2
-    CORE = 3
+class Destination(str, Enum):
+    ORDER_BOOK = "orderbooks"
+    BALANCE = "balances"
+    CORE = "core"
+    LOGS = "logs"

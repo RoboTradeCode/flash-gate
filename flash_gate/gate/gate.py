@@ -6,9 +6,9 @@ from typing import NoReturn, Coroutine
 from bidict import bidict
 from flash_gate.exchange import CcxtExchange
 from flash_gate.exchange.types import FetchOrderParams, CreateOrderParams
-from flash_gate.gate.connector import AeronConnector
-from flash_gate.gate.enums import EventAction
-from flash_gate.gate.types import Event
+from flash_gate.transmitter import AeronTransmitter
+from flash_gate.transmitter.enums import EventAction, Destination
+from flash_gate.transmitter.types import Event
 from .parsers import ConfigParser
 
 PING_DELAY_IN_SECONDS = 1
@@ -27,7 +27,7 @@ class Gate:
 
         self.logger = logging.getLogger(__name__)
         self.exchange = CcxtExchange(exchange_id, exchange_config)
-        self.connector = AeronConnector(config, self._handler)
+        self.transmitter = AeronTransmitter(self._handler, config[""])
 
         self.data_collection_method = config_parser.data_collection_method
         self.subscribe_delay = config_parser.subscribe_delay
@@ -45,7 +45,7 @@ class Gate:
 
     def _get_periodical_tasks(self) -> list[Coroutine]:
         return [
-            self.connector.run(),
+            self.transmitter.run(),
             self._watch_order_books(),
             self._watch_balance(),
             self._watch_orders(),
@@ -61,7 +61,9 @@ class Gate:
     def _deserialize_message(self, message: str) -> Event:
         try:
             event = json.loads(message)
-            self.connector.offer(event, only_log=True)
+            event_to_log = event
+            event_to_log["node"] = "gate"
+            self.transmitter.offer(event, Destination.LOGS)
             return event
         except json.JSONDecodeError as e:
             self.logger.error("Message deserialize error: %s", e)
@@ -83,7 +85,7 @@ class Gate:
             case EventAction.GET_BALANCE:
                 return self._get_balance(event)
             case _:
-                logging.warning("Unknown action: %s", event["action"])
+                self.logger.error("Unknown action: %s", event.get("action"))
                 return asyncio.sleep(0)
 
     async def _create_orders(self, event: Event):
@@ -98,7 +100,8 @@ class Gate:
             "action": EventAction.CREATE_ORDERS,
             "data": orders,
         }
-        self.connector.offer(event)
+        self.transmitter.offer(event, Destination.CORE)
+        self.transmitter.offer(event, Destination.LOGS)
 
     def _associate_with_event(
         self, event_id: str, orders: list[CreateOrderParams]
@@ -131,7 +134,8 @@ class Gate:
             "action": EventAction.GET_ORDERS,
             "data": [order],
         }
-        self.connector.offer(event)
+        self.transmitter.offer(event, Destination.CORE)
+        self.transmitter.offer(event, Destination.LOGS)
 
     async def _get_balance(self, event: Event) -> None:
         if not (assets := event["data"]):
@@ -144,7 +148,8 @@ class Gate:
             "action": EventAction.GET_BALANCE,
             "data": balance,
         }
-        self.connector.offer(event)
+        self.transmitter.offer(event, Destination.BALANCE)
+        self.transmitter.offer(event, Destination.LOGS)
 
     async def _watch_order_books(self):
         tasks = [
@@ -169,7 +174,7 @@ class Gate:
                 "action": EventAction.ORDER_BOOK_UPDATE,
                 "data": order_book,
             }
-            self.connector.offer(event, log=False)
+            self.transmitter.offer(event, Destination.ORDER_BOOK)
 
     async def _watch_balance(self) -> None:
         while True:
@@ -185,7 +190,8 @@ class Gate:
                 "action": EventAction.BALANCE_UPDATE,
                 "data": balance,
             }
-            self.connector.offer(event)
+            self.transmitter.offer(event, Destination.BALANCE)
+            self.transmitter.offer(event, Destination.LOGS)
 
     async def _watch_orders(self) -> None:
         while True:
@@ -205,7 +211,8 @@ class Gate:
                         "action": EventAction.ORDERS_UPDATE,
                         "data": [order],
                     }
-                    self.connector.offer(event)
+                    self.transmitter.offer(event, Destination.CORE)
+                    self.transmitter.offer(event, Destination.LOGS)
             except Exception as e:
                 self.logger.error(e)
 
@@ -220,11 +227,11 @@ class Gate:
             "action": EventAction.PING,
             "data": self.order_books_received,
         }
-        self.connector.offer(event, log=False)
+        self.transmitter.offer(event, Destination.LOGS)
 
     async def close(self):
         await self.exchange.close()
-        await self.connector.close()
+        await self.transmitter.close()
 
     async def __aenter__(self):
         return self
