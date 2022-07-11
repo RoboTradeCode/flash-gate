@@ -211,7 +211,6 @@ class CcxtExchange(Exchange):
     async def _create_orders(self, orders: list[CreateOrderParams]) -> list[Order]:
         coroutines = [self._create_order(order) for order in orders]
         orders = await asyncio.gather(*coroutines)
-        self.logger.warning(orders)
         # noinspection PyTypeChecker
         return orders
 
@@ -260,7 +259,7 @@ class CcxtExchange(Exchange):
 
     async def cancel_all_orders(self, symbols: list[str]) -> None:
         self.logger.info("Trying to cancel all orders: %s", symbols)
-        await self.cancel_all_orders(symbols)
+        await self._cancel_all_orders(symbols)
         self.logger.info("All orders has been successfully cancelled")
 
     async def _cancel_all_orders(self, symbols: list[str]) -> None:
