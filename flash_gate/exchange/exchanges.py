@@ -221,7 +221,7 @@ class CcxtExchange(Exchange):
             params["type"],
             params["side"],
             params["amount"],
-            params["price"],
+            params["price"] if params["type"] != "market" else 0,
         )
         self.id_by_client_order_id[params["client_order_id"]] = raw_order["id"]
         raw_order = self._update_client_order_id(raw_order)
@@ -269,7 +269,7 @@ class CcxtExchange(Exchange):
 
     async def _fetch_raw_open_orders(self, symbols: list[str]) -> list[dict]:
         coroutines = [self.exchange.fetch_open_orders(symbol) for symbol in symbols]
-        raw_orders_groups = await asyncio.gather(*coroutines, return_exceptions=True)
+        raw_orders_groups = await asyncio.gather(*coroutines)
         raw_orders = list(itertools.chain.from_iterable(raw_orders_groups))
         return raw_orders
 

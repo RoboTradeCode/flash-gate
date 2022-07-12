@@ -3,7 +3,7 @@ import json
 
 
 event = {
-    "event_id": "0bf733e3-da9b-4516-8288-c34c8d838d29",
+    "event_id": "0bf733e3-da9b-4516-8288-c34c8d838d30",
     "event": "command",
     "exchange": "exmo",
     "node": "core",
@@ -14,12 +14,12 @@ event = {
     "timestamp": 1502962946216000,
     "data": [
         {
-            "symbol": "ETH/USDT",
+            "symbol": "BTC/USDT",
             "type": "market",
-            "side": "sell",
-            "amount": 0.001,
-            "price": 100000,
-            "client_order_id": "0fa56216-fb3e-11ec-b939-0242ac120003",
+            "side": "buy",
+            "amount": 0.002,
+            "price": 20342.14,
+            "client_order_id": "0fa56216-fb3e-11ec-b939-0242ac120004",
         },
     ],
 }
