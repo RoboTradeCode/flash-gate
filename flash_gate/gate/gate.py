@@ -14,7 +14,6 @@ from .parsers import ConfigParser
 PING_DELAY_IN_SECONDS = 1
 
 
-# TODO: Демон дух сложности попал в код и очень опасная ситуация!
 class Gate:
     """
     Шлюз, принимающий команды от торгового ядра и выполняющий их на бирже
