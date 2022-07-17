@@ -50,6 +50,10 @@ class CcxtOrderFormatter(Formatter):
         order = filter_dict(structure, self.KEYS)
         order["client_order_id"] = client_order_id
         order["timestamp"] = get_timestamp_in_us(structure)
+
+        if order["type"] == "market":
+            order["status"] = "closed"
+
         return order
 
 

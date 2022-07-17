@@ -173,10 +173,33 @@ class CcxtExchange(Exchange):
 
     async def _fetch_order(self, params: FetchOrderParams) -> Order:
         order_id = self._get_id_by_client_order_id(params["client_order_id"])
-        raw_order = await self.exchange.fetch_order(order_id, params["symbol"])
-        raw_order = self._update_client_order_id(raw_order)
-        order = self._format(raw_order, StructureType.ORDER)
-        return order
+
+        try:
+            raw_order = await self.exchange.fetch_order(order_id, params["symbol"])
+            raw_order = self._update_client_order_id(raw_order)
+            order = self._format(raw_order, StructureType.ORDER)
+            return order
+        except ccxtpro.OrderNotFound:
+            if order := await self._fetch_order_from_open(params):
+                return order
+            if order := await self._fetch_order_from_canceled(params):
+                return order
+
+    async def _fetch_order_from_open(self, params: FetchOrderParams) -> Order:
+        open_orders = await self.fetch_open_orders([params["symbol"]])
+        for order in open_orders:
+            if order["client_order_id"] == params["client_order_id"]:
+                return order
+
+    async def _fetch_order_from_canceled(self, params: FetchOrderParams) -> Order:
+        order_id = self._get_id_by_client_order_id(params["client_order_id"])
+        raw_orders = await self.exchange.fetch_canceled_orders(params["symbol"])
+        for raw_order in raw_orders:
+            if raw_order["id"] == order_id:
+                raw_order = self._update_client_order_id(raw_order)
+                raw_order["status"] = "canceled"
+                order = self._format(raw_order, StructureType.ORDER)
+                return order
 
     async def fetch_open_orders(self, symbols: list[str]) -> list[Order]:
         self.logger.info("Trying to fetch open orders: %s", symbols)
