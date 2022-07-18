@@ -53,6 +53,7 @@ class CcxtOrderFormatter(Formatter):
 
         if order["type"] == "market":
             order["status"] = "closed"
+            order["filled"] = order["amount"]
 
         return order
 
