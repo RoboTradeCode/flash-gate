@@ -116,7 +116,6 @@ class Gate:
                 "data": str(e),
             }
             self.transmitter.offer(log_event, Destination.LOGS)
-            print(1)
 
     def _associate_with_event(
         self, event_id: str, orders: list[CreateOrderParams]
@@ -234,9 +233,7 @@ class Gate:
                             pass
 
                 await asyncio.sleep(1)
-                print(orders)
                 for order in orders:
-                    print(order)
                     event: Event = {
                         "event_id": self.event_id_by_client_order_id.get(
                             order["client_order_id"]
