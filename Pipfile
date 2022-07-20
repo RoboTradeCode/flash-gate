@@ -10,6 +10,7 @@ ccxtpro = {subdirectory = "python", git = "ssh://git@github.com/kroitor/ccxt.pro
 pyyaml = "*"
 bidict = "*"
 aiofiles = "*"
+sentry-sdk = "*"
 
 [dev-packages]
 pytest = "*"
