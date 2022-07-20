@@ -233,7 +233,7 @@ class Gate:
 
     async def close(self):
         await self.exchange.close()
-        await self.transmitter.close()
+        self.transmitter.close()
 
     async def __aenter__(self):
         return self
