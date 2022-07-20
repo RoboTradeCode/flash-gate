@@ -236,6 +236,8 @@ class Gate:
 
                         await asyncio.sleep(self.fetch_delays["order"])
 
+                await asyncio.sleep(0)
+
                 for order in orders:
                     event: Event = {
                         "event_id": self.event_id_by_client_order_id.get(
