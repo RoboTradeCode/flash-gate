@@ -240,6 +240,7 @@ class CcxtExchange(Exchange):
             # Задержка для биржы Exmo
             # Чтобы новый nonce отличался от предыдущего
             await asyncio.sleep(1e-3)
+        return created_orders
 
     async def _create_order(self, params: CreateOrderParams) -> Order:
         self.logger.info("Trying to create order: %s", params)

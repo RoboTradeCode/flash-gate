@@ -10,14 +10,6 @@ from flash_gate.transmitter import AeronTransmitter
 from flash_gate.transmitter.enums import EventAction, Destination
 from flash_gate.transmitter.types import Event, EventType
 from .parsers import ConfigParser
-from dataclasses import dataclass
-
-
-@dataclass
-class Order:
-    client_order_id: str
-    symbol: str
-
 
 PING_DELAY_IN_SECONDS = 1
 
@@ -43,7 +35,7 @@ class Gate:
         self.order_book_limit = config_parser.order_book_limit
         self.assets = config_parser.assets
 
-        self.tracked_orders: set[Order] = set()
+        self.tracked_orders: set[tuple[str, str]] = set()
         self.event_id_by_client_order_id = bidict()
         self.order_books_received = 0
 
@@ -102,7 +94,7 @@ class Gate:
             orders: list[CreateOrderParams] = event["data"]
 
             for order in orders:
-                _order = Order(order["client_order_id"], order["symbol"])
+                _order = (order["client_order_id"], order["symbol"])
                 self.tracked_orders.add(_order)
 
             self._associate_with_event(event_id, orders)
@@ -116,7 +108,7 @@ class Gate:
             self.transmitter.offer(event, Destination.CORE)
             self.transmitter.offer(event, Destination.LOGS)
         except Exception as e:
-            self.logger.error(e)
+            self.logger.exception(e)
             log_event: Event = {
                 "event_id": str(uuid.uuid4()),
                 "event": EventType.ERROR,
@@ -124,6 +116,7 @@ class Gate:
                 "data": str(e),
             }
             self.transmitter.offer(log_event, Destination.LOGS)
+            print(1)
 
     def _associate_with_event(
         self, event_id: str, orders: list[CreateOrderParams]
@@ -223,22 +216,27 @@ class Gate:
                     orders = await self.exchange.watch_orders()
                 else:
                     orders = []
-                    for _order in self.tracked_orders:
+                    cp = self.tracked_orders.copy()
+                    for _order in cp:
                         params = {
-                            "client_order_id": _order.client_order_id,
-                            "symbol": _order.symbol,
+                            "client_order_id": _order[0],
+                            "symbol": _order[1],
                         }
-                        order = await self.exchange.fetch_order(params)
-                        orders.append(order)
 
-                        if order["status"] != "open":
-                            self.tracked_orders.discard(_order)
+                        try:
+                            order = await self.exchange.fetch_order(params)
+                            orders.append(order)
 
-                        await asyncio.sleep(self.fetch_delays["order"])
+                            if order["status"] != "open":
+                                self.tracked_orders.discard(_order)
 
-                await asyncio.sleep(0)
+                        except ValueError:
+                            pass
 
+                await asyncio.sleep(1)
+                print(orders)
                 for order in orders:
+                    print(order)
                     event: Event = {
                         "event_id": self.event_id_by_client_order_id.get(
                             order["client_order_id"]
