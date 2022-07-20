@@ -8,8 +8,16 @@ from flash_gate.exchange import CcxtExchange
 from flash_gate.exchange.types import FetchOrderParams, CreateOrderParams
 from flash_gate.transmitter import AeronTransmitter
 from flash_gate.transmitter.enums import EventAction, Destination
-from flash_gate.transmitter.types import Event
+from flash_gate.transmitter.types import Event, EventType
 from .parsers import ConfigParser
+from dataclasses import dataclass
+
+
+@dataclass
+class Order:
+    client_order_id: str
+    symbol: str
+
 
 PING_DELAY_IN_SECONDS = 1
 
@@ -35,6 +43,7 @@ class Gate:
         self.order_book_limit = config_parser.order_book_limit
         self.assets = config_parser.assets
 
+        self.tracked_orders: set[Order] = set()
         self.event_id_by_client_order_id = bidict()
         self.order_books_received = 0
 
@@ -92,6 +101,10 @@ class Gate:
             event_id = event["event_id"]
             orders: list[CreateOrderParams] = event["data"]
 
+            for order in orders:
+                _order = Order(order["client_order_id"], order["symbol"])
+                self.tracked_orders.add(_order)
+
             self._associate_with_event(event_id, orders)
             orders = await self.exchange.create_orders(orders)
 
@@ -104,6 +117,13 @@ class Gate:
             self.transmitter.offer(event, Destination.LOGS)
         except Exception as e:
             self.logger.error(e)
+            log_event: Event = {
+                "event_id": str(uuid.uuid4()),
+                "event": EventType.ERROR,
+                "action": EventAction.CREATE_ORDERS,
+                "data": str(e),
+            }
+            self.transmitter.offer(log_event, Destination.LOGS)
 
     def _associate_with_event(
         self, event_id: str, orders: list[CreateOrderParams]
@@ -202,8 +222,19 @@ class Gate:
                 if self.data_collection_method["order"] == "websocket":
                     orders = await self.exchange.watch_orders()
                 else:
-                    orders = await self.exchange.fetch_open_orders(self.tickers)
-                    await asyncio.sleep(self.fetch_delays["order"])
+                    orders = []
+                    for _order in self.tracked_orders:
+                        params = {
+                            "client_order_id": _order.client_order_id,
+                            "symbol": _order.symbol,
+                        }
+                        order = await self.exchange.fetch_order(params)
+                        orders.append(order)
+
+                        if order["status"] != "open":
+                            self.tracked_orders.discard(_order)
+
+                        await asyncio.sleep(self.fetch_delays["order"])
 
                 for order in orders:
                     event: Event = {

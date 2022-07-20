@@ -1,3 +1,4 @@
+import asyncio
 import itertools
 import logging
 from abc import ABC, abstractmethod
@@ -231,8 +232,14 @@ class CcxtExchange(Exchange):
         return orders
 
     async def _create_orders(self, orders: list[CreateOrderParams]) -> list[Order]:
-        orders = [await self._create_order(order) for order in orders]
-        return orders
+        created_orders = []
+        for order in orders:
+            created_order = await self._create_order(order)
+            created_orders.append(created_order)
+
+            # Задержка для биржы Exmo
+            # Чтобы новый nonce отличался от предыдущего
+            await asyncio.sleep(1e-3)
 
     async def _create_order(self, params: CreateOrderParams) -> Order:
         self.logger.info("Trying to create order: %s", params)
