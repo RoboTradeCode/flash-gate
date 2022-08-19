@@ -105,7 +105,7 @@ class ConfigParser:
         return public_ip
 
     @property
-    def accounts(self) -> list[list[str]] | None:
+    def accounts(self) -> list[dict] | None:
         accounts = self.config['exchange'].get('account')
         return accounts
 
