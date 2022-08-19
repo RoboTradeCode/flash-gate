@@ -104,6 +104,11 @@ class ConfigParser:
 
         return public_ip
 
+    @property
+    def accounts(self) -> list[list[str]] | None:
+        accounts = self.config['exchange'].get('account')
+        return accounts
+
     def check_intersection(self, public, private):
         public = set(public)
         private = set(private)
