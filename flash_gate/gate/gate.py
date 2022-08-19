@@ -34,7 +34,7 @@ class Gate:
         self._private_exchange_pool = PrivateExchangePool(
             exchange_id=exchange_id,
             accounts=config_parser.accounts
-        ) if config_parser.accounts is None else None
+        ) if config_parser.accounts is not None else None
 
         self.exchange_pool = ExchangePool(
             exchange_id,
@@ -74,9 +74,15 @@ class Gate:
 
     @property
     def exchange(self):
-        if self._exchange is not None:
-            return self._exchange
-        return self._private_exchange_pool.acquire()
+        """
+        Получить экземпляр биржи
+
+        Возваращет очередной экземпляр из пула или один и тот же экземлпяр, если мульти-аккаунты не используются.
+        Позволяет работать с пулом таким образом, как если бы это был атрибут класса.
+        """
+        if self._private_exchange_pool is not None:
+            return self._private_exchange_pool.acquire()
+        return self._exchange
 
     def deserialize_message(self, message: str) -> Event:
         try:
