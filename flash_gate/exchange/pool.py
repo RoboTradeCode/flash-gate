@@ -57,3 +57,32 @@ class ExchangePool:
             acquired_exchange = self._queue.get()
             session = acquired_exchange.exchange.exchange.session
             await session.close()
+
+
+class PrivateExchangePool:
+    def __init__(self, exchange_id: str, accounts: list[dict], delay=0):
+        self._exchange_id = exchange_id
+
+        self._queue: Queue[AcquiredExchange] = Queue()
+        for exchange in self._create_exchanges(accounts):
+            self._queue.put(AcquiredExchange(exchange, monotonic(), delay))
+
+    def _create_exchanges(self, accounts: list[dict]) -> list[CcxtExchange]:
+        exchanges = [self._create_exchange(keys) for keys in accounts]
+        return exchanges
+
+    def _create_exchange(self, keys: dict) -> CcxtExchange:
+        exchange = CcxtExchange(self._exchange_id, keys)
+        return exchange
+
+    async def acquire(self):
+        acquired_exchange = self._queue.get()
+        if (remaining := acquired_exchange.remaining) > 0:
+            await asyncio.sleep(remaining)
+
+        now = monotonic()
+        acquired_exchange.last_acquire = now
+        self._queue.put(acquired_exchange)
+
+        return acquired_exchange.exchange
+
