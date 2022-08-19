@@ -10,6 +10,7 @@ from flash_gate.transmitter import AeronTransmitter
 from flash_gate.transmitter.enums import EventAction, Destination
 from flash_gate.transmitter.types import Event, EventNode, EventType
 from .parsers import ConfigParser
+from ..exchange.pool import PrivateExchangePool
 
 logger = logging.getLogger(__name__)
 lock = asyncio.Lock()
@@ -28,7 +29,13 @@ class Gate:
         self.event_id_by_client_order_id = Memcached(key_prefix="event_id")
         self.order_id_by_client_order_id = Memcached(key_prefix="order_id")
         self.transmitter = AeronTransmitter(self.handler, config)
-        self.exchange = CcxtExchange(exchange_id, exchange_config)
+
+        self._exchange = CcxtExchange(exchange_id, exchange_config) if config_parser.accounts is None else None
+        self._private_exchange_pool = PrivateExchangePool(
+            exchange_id=exchange_id,
+            accounts=config_parser.accounts
+        ) if config_parser.accounts is None else None
+
         self.exchange_pool = ExchangePool(
             exchange_id,
             config_parser.public_config,
@@ -64,6 +71,12 @@ class Gate:
         event = self.deserialize_message(message)
         task = self.get_task(event)
         asyncio.create_task(task)
+
+    @property
+    def exchange(self):
+        if self._exchange is not None:
+            return self._exchange
+        return self._private_exchange_pool.acquire()
 
     def deserialize_message(self, message: str) -> Event:
         try:
@@ -356,3 +369,4 @@ class Gate:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
+
