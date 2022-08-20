@@ -145,6 +145,9 @@ class Gate:
 
     async def create_order(self, param: dict, event_id: str):
         try:
+            if self.sem.locked():
+                logger.info("Need more tokens!")
+
             async with self.sem:
                 exchange = await self.get_exchange()
                 order = await exchange.create_order(param)
