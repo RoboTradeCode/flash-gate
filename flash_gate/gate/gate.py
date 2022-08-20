@@ -362,6 +362,7 @@ class Gate:
                     }
                     self.transmitter.offer(log_event, Destination.CORE)
                     self.transmitter.offer(log_event, Destination.LOGS)
+                    self.open_orders.discard((client_order_id, symbol))
 
                 logger.info("Open orders: %s", len(self.open_orders))
                 await asyncio.sleep(self.orders_delay)
