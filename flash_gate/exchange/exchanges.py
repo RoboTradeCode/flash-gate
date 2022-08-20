@@ -115,7 +115,6 @@ class CcxtExchange(Exchange):
 
     @staticmethod
     def nonce():
-        sleep(1e-9)
         return time_ns()
 
     async def fetch_order_book(self, symbol: str, limit: int) -> OrderBook:

@@ -90,12 +90,6 @@ class PrivateExchangePool:
         Получить очередной экземпляр exchange
         """
         acquired_exchange = self._queue.get()
-        if (remaining := acquired_exchange.remaining) > 0:
-            await asyncio.sleep(remaining)
-
-        now = monotonic()
-        acquired_exchange.last_acquire = now
         self._queue.put(acquired_exchange)
 
         return acquired_exchange.exchange
-
