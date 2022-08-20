@@ -106,7 +106,7 @@ class ConfigParser:
 
     @property
     def accounts(self) -> list[dict] | None:
-        accounts = self.config['exchange'].get('account')
+        accounts = self._gate_config["exchange"].get("accounts")
         return accounts
 
     def check_intersection(self, public, private):
