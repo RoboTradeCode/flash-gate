@@ -120,27 +120,24 @@ class Gate:
                 return self.get_balance(event)
 
     async def create_orders(self, event: Event):
-        async with lock:
-            for param in event.get("data", []):
-                await self.create_order(param, event.get("event_id"))
+        for param in event.get("data", []):
+            await self.create_order(param, event.get("event_id"))
 
     async def get_orders(self, event: Event):
         for param in event.get("data", []):
             await self.get_order(param)
 
     async def cancel_orders(self, event: Event):
-        async with lock:
-            for param in event.get("data", []):
-                await self.cancel_order(param)
+        for param in event.get("data", []):
+            await self.cancel_order(param)
 
     async def cancel_all_orders(self):
-        async with lock:
-            try:
-                exchange = await self.get_exchange()
-                await exchange.cancel_all_orders(self.tickers)
+        try:
+            exchange = await self.get_exchange()
+            await exchange.cancel_all_orders(self.tickers)
 
-            except Exception as e:
-                logger.exception(e)
+        except Exception as e:
+            logger.exception(e)
 
     async def create_order(self, param: dict, event_id: str):
         try:
@@ -200,9 +197,8 @@ class Gate:
             order_id = self.order_id_by_client_order_id.get(param["client_order_id"])
             symbol = param["symbol"]
 
-            async with lock:
-                exchange = await self.get_exchange()
-                order = await exchange.fetch_order({"id": order_id, "symbol": symbol})
+            exchange = await self.get_exchange()
+            order = await exchange.fetch_order({"id": order_id, "symbol": symbol})
 
             order["client_order_id"] = param["client_order_id"]
 
@@ -233,9 +229,8 @@ class Gate:
             assets = self.assets
 
         try:
-            async with lock:
-                exchange = await self.get_exchange()
-                balance = await exchange.fetch_partial_balance(assets)
+            exchange = await self.get_exchange()
+            balance = await exchange.fetch_partial_balance(assets)
 
             event: Event = {
                 "event_id": event["event_id"],
@@ -290,9 +285,8 @@ class Gate:
     async def watch_balance(self):
         while True:
             try:
-                async with lock:
-                    exchange = await self.get_exchange()
-                    balance = await exchange.fetch_partial_balance(self.assets)
+                exchange = await self.get_exchange()
+                balance = await exchange.fetch_partial_balance(self.assets)
 
                 event: Event = {
                     "event_id": str(uuid.uuid4()),
@@ -322,11 +316,10 @@ class Gate:
                 try:
                     order_id = self.order_id_by_client_order_id.get(client_order_id)
 
-                    async with lock:
-                        exchange = await self.get_exchange()
-                        order = await exchange.fetch_order(
-                            {"id": order_id, "symbol": symbol}
-                        )
+                    exchange = await self.get_exchange()
+                    order = await exchange.fetch_order(
+                        {"id": order_id, "symbol": symbol}
+                    )
 
                     order["client_order_id"] = client_order_id
 
