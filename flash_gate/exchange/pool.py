@@ -60,11 +60,12 @@ class ExchangePool:
 
 
 class PrivateExchangePool:
-    def __init__(self, exchange_id: str, accounts: list[dict], delay=0):
+    def __init__(self, exchange_id: str, config: dict, accounts: list[dict], delay=0):
         """
         Пул exchange с приватным соединением. Создает подключения с помощью переданных ключей.
         """
         self._exchange_id = exchange_id
+        self._config = config
 
         self._queue: Queue[AcquiredExchange] = Queue()
         for exchange in self._create_exchanges(accounts):
@@ -82,7 +83,8 @@ class PrivateExchangePool:
         Подключиться к бирже
         :param keys: словарь с ключами api_key, secret_key
         """
-        exchange = CcxtExchange(self._exchange_id, keys)
+        config = self._config | keys
+        exchange = CcxtExchange(self._exchange_id, config)
         return exchange
 
     async def acquire(self) -> CcxtExchange:
@@ -91,5 +93,4 @@ class PrivateExchangePool:
         """
         acquired_exchange = self._queue.get()
         self._queue.put(acquired_exchange)
-
         return acquired_exchange.exchange

@@ -37,7 +37,9 @@ class Gate:
         )
         self._private_exchange_pool = (
             PrivateExchangePool(
-                exchange_id=exchange_id, accounts=config_parser.accounts
+                exchange_id=exchange_id,
+                config=exchange_config,
+                accounts=config_parser.accounts,
             )
             if config_parser.accounts is not None
             else None
