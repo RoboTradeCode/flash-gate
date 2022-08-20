@@ -44,6 +44,7 @@ class Gate:
             if config_parser.accounts is not None
             else None
         )
+        self.sem = asyncio.Semaphore(len(config_parser.accounts))
 
         self.exchange_pool = ExchangePool(
             exchange_id,
@@ -135,16 +136,18 @@ class Gate:
 
     async def cancel_all_orders(self):
         try:
-            exchange = await self.get_exchange()
-            await exchange.cancel_all_orders(self.tickers)
+            async with self.sem:
+                exchange = await self.get_exchange()
+                await exchange.cancel_all_orders(self.tickers)
 
         except Exception as e:
             logger.exception(e)
 
     async def create_order(self, param: dict, event_id: str):
         try:
-            exchange = await self.get_exchange()
-            order = await exchange.create_order(param)
+            async with self.sem:
+                exchange = await self.get_exchange()
+                order = await exchange.create_order(param)
 
             order["client_order_id"] = param["client_order_id"]
             self.event_id_by_client_order_id.set(order["client_order_id"], event_id)
@@ -176,8 +179,9 @@ class Gate:
             order_id = self.order_id_by_client_order_id.get(param["client_order_id"])
             symbol = param["symbol"]
 
-            exchange = await self.get_exchange()
-            await exchange.cancel_order({"id": order_id, "symbol": symbol})
+            async with self.sem:
+                exchange = await self.get_exchange()
+                await exchange.cancel_order({"id": order_id, "symbol": symbol})
 
         except ccxt.base.errors.OrderNotFound:
             pass
@@ -199,8 +203,9 @@ class Gate:
             order_id = self.order_id_by_client_order_id.get(param["client_order_id"])
             symbol = param["symbol"]
 
-            exchange = await self.get_exchange()
-            order = await exchange.fetch_order({"id": order_id, "symbol": symbol})
+            async with self.sem:
+                exchange = await self.get_exchange()
+                order = await exchange.fetch_order({"id": order_id, "symbol": symbol})
 
             order["client_order_id"] = param["client_order_id"]
 
@@ -231,8 +236,9 @@ class Gate:
             assets = self.assets
 
         try:
-            exchange = await self.get_exchange()
-            balance = await exchange.fetch_partial_balance(assets)
+            async with self.sem:
+                exchange = await self.get_exchange()
+                balance = await exchange.fetch_partial_balance(assets)
 
             event: Event = {
                 "event_id": event["event_id"],
@@ -287,8 +293,9 @@ class Gate:
     async def watch_balance(self):
         while True:
             try:
-                exchange = await self.get_exchange()
-                balance = await exchange.fetch_partial_balance(self.assets)
+                async with self.sem:
+                    exchange = await self.get_exchange()
+                    balance = await exchange.fetch_partial_balance(self.assets)
 
                 event: Event = {
                     "event_id": str(uuid.uuid4()),
@@ -318,10 +325,11 @@ class Gate:
                 try:
                     order_id = self.order_id_by_client_order_id.get(client_order_id)
 
-                    exchange = await self.get_exchange()
-                    order = await exchange.fetch_order(
-                        {"id": order_id, "symbol": symbol}
-                    )
+                    async with self.sem:
+                        exchange = await self.get_exchange()
+                        order = await exchange.fetch_order(
+                            {"id": order_id, "symbol": symbol}
+                        )
 
                     order["client_order_id"] = client_order_id
 
