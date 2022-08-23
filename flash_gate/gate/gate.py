@@ -340,6 +340,7 @@ class Gate:
         while True:
             try:
                 await self.no_priority_commands.wait()
+
                 async with self.sem:
                     exchange = await self.get_exchange()
                     balance = await exchange.fetch_partial_balance(self.assets)
@@ -373,6 +374,7 @@ class Gate:
                     order_id = self.order_id_by_client_order_id.get(client_order_id)
 
                     await self.no_priority_commands.wait()
+
                     async with self.sem:
                         exchange = await self.get_exchange()
                         order = await exchange.fetch_order(
