@@ -82,13 +82,53 @@ class Gate:
             self.health_check(),
         ]
 
-    def handler(self, message: str):
+    def aeron_handler(self, message: str) -> None:
+        """
+        Функция обратного вызова для обработки сообщений, считываемых из журнала Aeron
+
+        Сообщение будет целым. Если оно фрагментировалось, то перед вызовом функции
+        будет собрано из фрагментов. Сообщение фрагментируется, если оно больше MTU
+
+        :param message: Сообщение
+        """
+
+        # TODO: Move log to transmitter
         logger.debug("Message: %s", message)
-        event = self.deserialize_message(message)
-        command = self.get_task(event)
-        task = asyncio.create_task(command)
+
+        coro = self.handle_message(message)
+        task = asyncio.create_task(coro)
+
+        # Save reference to result, to avoid task disappearing
         background_tasks.add(task)
         task.add_done_callback(background_tasks.discard)
+
+    async def handle_message(self, message: str) -> None:
+        """
+        Обработать сообщение
+
+        :param message: Сообщение
+        """
+        try:
+            event = self.deserialize_message(message)
+            command = self.get_task(event)
+            await command
+
+        except Exception as e:
+            ...
+
+    async def deserialize_message(self, message: str) -> Event:
+        """
+        Преобразовать сообщение в объект события
+
+        :param message: Сообщение
+        :return: Событие
+        """
+        try:
+            event = json.loads(message)
+            self.log(event)
+            return event
+        except Exception as e:
+            logger.error("Message deserialize error: %s", e)
 
     async def get_exchange(self):
         """
