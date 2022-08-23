@@ -45,6 +45,9 @@ class Gate:
             else None
         )
         self.sem = asyncio.Semaphore(len(config_parser.accounts))
+
+        # Событие, которое наступает после обработки команды ядра
+        # Когда событие очищено, шлюз не запрашивает периодические данные
         self.no_priority_commands = asyncio.Event()
         self.no_priority_commands.set()
 
