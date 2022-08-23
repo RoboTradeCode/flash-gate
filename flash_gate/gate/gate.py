@@ -14,6 +14,7 @@ from ..exchange.pool import PrivateExchangePool
 
 logger = logging.getLogger(__name__)
 lock = asyncio.Lock()
+background_tasks = set()
 
 
 class Gate:
@@ -84,8 +85,10 @@ class Gate:
     def handler(self, message: str):
         logger.debug("Message: %s", message)
         event = self.deserialize_message(message)
-        task = self.get_task(event)
-        asyncio.create_task(task)
+        command = self.get_task(event)
+        task = asyncio.create_task(command)
+        background_tasks.add(task)
+        task.add_done_callback(background_tasks.discard)
 
     async def get_exchange(self):
         """
