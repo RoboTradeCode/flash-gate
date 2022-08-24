@@ -125,9 +125,7 @@ class ConfigParser:
 
     @property
     def public_delay(self) -> float:
-        rps = self.api_requests_per_seconds["public"]["exchange_rps_limit"]
-        public_delay = 1 / rps
-        return public_delay
+        return 0
 
     @property
     def private_delay(self) -> float:
