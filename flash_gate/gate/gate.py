@@ -107,7 +107,7 @@ class Gate:
         """
         Обработать поступившее сообщение
 
-        Результат обработки сообщения отправится на лог-сервер и обратно ядру
+        Результат обработки сообщения отправится ядру и дополнительно на лог-сервер
         """
         event = await self.get_response(message)
         self.transmitter.offer(event, Destination.CORE)
@@ -146,16 +146,29 @@ class Gate:
         события. Если в процессе выполнения команды возникает исключение, возвращает
         событие ошибки, содержащее исходные данные и текст исключения
         """
-        action = event.get("action")
-        event_id = event.get("event_id")
-
         try:
-            command = SimpleCommandFactory.create_command(action)
-            result = await command.execute()
-            response = self.formatter.format(EventType.DATA, action, None, None, result)
-        except:
-            response = self.formatter.format(EventType.DATA, action, None, None, result)
+            response = await self.execute_command(event)
+        except Exception as e:
+            response = await self.get_error(event, e)
 
+        return response
+
+    async def execute_command(self, event: dict) -> dict:
+        """
+        Выполнить команду
+        """
+        command = SimpleCommandFactory.create_command(action)
+        result = await command.execute()
+        payload = {"event_id": event_id, "data": result}
+        response = self.formatter.format(EventType.DATA, action, **payload)
+        return response
+
+    async def get_error(self, event: dict, exception: Exception):
+        event_id = event.get("event_id")
+        action = event.get("action")
+        data = event.get("data")
+        payload = {"event_id": event_id, "message": str(exception), "data": data}
+        response = self.formatter.format(EventType.ERROR, action, **payload)
         return response
 
     async def get_exchange(self):
