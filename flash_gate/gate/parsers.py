@@ -12,6 +12,21 @@ class ConfigParser:
         return gate_config
 
     @property
+    def algo(self) -> str:
+        algo = self.config["algo"]
+        return algo
+
+    @property
+    def node(self) -> str:
+        node = self._gate_config["info"]["node"]
+        return node
+
+    @property
+    def instance(self) -> str:
+        instance = self._gate_config["info"]["instance"]
+        return instance
+
+    @property
     def _rate_limits(self) -> dict:
         rate_limits = self._gate_config["rate_limits"]
         return rate_limits

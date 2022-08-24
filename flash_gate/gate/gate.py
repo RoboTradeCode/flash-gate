@@ -9,6 +9,8 @@ from flash_gate.exchange import CcxtExchange, ExchangePool
 from flash_gate.transmitter import AeronTransmitter
 from flash_gate.transmitter.enums import EventAction, Destination
 from flash_gate.transmitter.types import Event, EventNode, EventType
+from .factories import SimpleCommandFactory
+from .formatters import EventFormatter
 from .parsers import ConfigParser
 from ..exchange.pool import PrivateExchangePool
 
@@ -26,10 +28,14 @@ class Gate:
         config_parser = ConfigParser(config)
         exchange_id = config_parser.exchange_id
         exchange_config = config_parser.exchange_config
+        algo = config_parser.algo
+        node = config_parser.node
+        instance = config_parser.instance
 
         self.event_id_by_client_order_id = Memcached(key_prefix="event_id")
         self.order_id_by_client_order_id = Memcached(key_prefix="order_id")
-        self.transmitter = AeronTransmitter(self.handler, config)
+        self.transmitter = AeronTransmitter(self.aeron_handler, config)
+        self.formatter = EventFormatter(exchange_id, algo, node, instance)
 
         self._exchange = (
             CcxtExchange(exchange_id, exchange_config)
@@ -82,16 +88,75 @@ class Gate:
             self.health_check(),
         ]
 
-    def handler(self, message: str):
-        logger.debug("Message: %s", message)
-        event = self.deserialize_message(message)
-        command = self.get_task(event)
+    def aeron_handler(self, message: str) -> None:
+        """
+        Функция обратного вызова для обработки сообщений, считываемых из журнала Aeron
 
-        task = asyncio.create_task(command)
+        Сообщение будет целым. Если оно фрагментировалось, то перед вызовом функции
+        будет собрано из фрагментов. Сообщение фрагментируется, если оно больше MTU
+        """
+        logger.debug("Message: %s", message)
+        coro = self.handle_message(message)
+        task = asyncio.create_task(coro)
 
         # Save reference to result, to avoid task disappearing
         background_tasks.add(task)
         task.add_done_callback(background_tasks.discard)
+
+    async def handle_message(self, message: str) -> None:
+        """
+        Обработать поступившее сообщение
+
+        Результат обработки сообщения отправится на лог-сервер и обратно ядру
+        """
+        event = await self.get_response(message)
+        self.transmitter.offer(event, Destination.CORE)
+        self.transmitter.offer(event, Destination.LOGS)
+
+    async def get_response(self, message: str) -> dict:
+        """
+        Получить ответ на сообщение
+
+        Преобразует сообщение в событие, а затем возвращает ответное событие на него.
+        Если в процессе преобразования возникает ошибка, возвращает событие ошибки,
+        включающее исходное сообщение и текст исключения
+        """
+        try:
+            event = await self.deserialize(message)
+            response = await self.handle_event(event)
+        except Exception as e:
+            payload = {"message": str(e), "data": message}
+            response = self.formatter.format(EventType.ERROR, **payload)
+
+        return response
+
+    @staticmethod
+    async def deserialize(message: str) -> dict:
+        """
+        Преобразовать сообщение из формата JSON в событие
+        """
+        event = json.loads(message)
+        return event
+
+    async def handle_event(self, event: dict) -> dict:
+        """
+        Обработать событие
+
+        Выполняет команду из события и возвращает результат исполнения в виде другого
+        события. Если в процессе выполнения команды возникает исключение, возвращает
+        событие ошибки, содержащее исходные данные и текст исключения
+        """
+        action = event.get("action")
+        event_id = event.get("event_id")
+
+        try:
+            command = SimpleCommandFactory.create_command(action)
+            result = await command.execute()
+            response = self.formatter.format(EventType.DATA, action, None, None, result)
+        except:
+            response = self.formatter.format(EventType.DATA, action, None, None, result)
+
+        return response
 
     async def get_exchange(self):
         """
@@ -104,34 +169,10 @@ class Gate:
             return await self._private_exchange_pool.acquire()
         return self._exchange
 
-    def deserialize_message(self, message: str) -> Event:
-        try:
-            event = json.loads(message)
-            self.log(event)
-            return event
-        except Exception as e:
-            logger.error("Message deserialize error: %s", e)
-
     def log(self, event: Event):
         event = event.copy()
         event["node"] = EventNode.GATE
         self.transmitter.offer(event, Destination.LOGS)
-
-    def get_task(self, event: Event) -> Coroutine:
-        if not isinstance(event, dict):
-            return asyncio.sleep(0)
-
-        match event.get("action"):
-            case EventAction.CREATE_ORDERS:
-                return self.create_orders(event)
-            case EventAction.CANCEL_ORDERS:
-                return self.cancel_orders(event)
-            case EventAction.CANCEL_ALL_ORDERS:
-                return self.cancel_all_orders()
-            case EventAction.GET_ORDERS:
-                return self.get_orders(event)
-            case EventAction.GET_BALANCE:
-                return self.get_balance(event)
 
     async def create_orders(self, event: Event):
         try:

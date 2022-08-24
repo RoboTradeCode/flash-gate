@@ -2,21 +2,20 @@ from enum import Enum
 
 
 class EventType(str, Enum):
+    """
+    Тип события. Используется при анализе запросов и формировании ответов
+    """
+
     COMMAND = "command"
     DATA = "data"
     ERROR = "error"
 
 
-class EventNode(str, Enum):
-    """
-    Узел торговой системы. Используется при формировании ответов
-    """
-
-    CORE = "core"
-    GATE = "gate"
-
-
 class EventAction(str, Enum):
+    """
+    Команда. Используется при анализе запросов и формировании ответов
+    """
+
     GET_BALANCE = "get_balance"
     CREATE_ORDERS = "create_orders"
     CANCEL_ORDERS = "cancel_orders"
@@ -26,10 +25,3 @@ class EventAction(str, Enum):
     BALANCE_UPDATE = "balance_update"
     ORDERS_UPDATE = "orders_update"
     PING = "ping"
-
-
-class Destination(str, Enum):
-    ORDER_BOOK = "orderbooks"
-    BALANCE = "balances"
-    CORE = "core"
-    LOGS = "logs"
