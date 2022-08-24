@@ -134,12 +134,6 @@ class ConfigParser:
         return private_delay
 
     @property
-    def order_book_delay(self) -> float:
-        rps = self.api_requests_per_seconds["public"]["order_book"]
-        order_book_delay = 1 / rps
-        return order_book_delay
-
-    @property
     def balance_delay(self) -> float:
         rps = self.api_requests_per_seconds["private"]["balance"]
         balance_delay = 1 / rps
