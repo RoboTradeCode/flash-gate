@@ -71,7 +71,7 @@ class Gate:
 
         # Метрики
         self.orderbook_latencies = []
-        self.orderbooks_rps = 0
+        self.orderbook_rps = 0
         self.private_api_total_rps = 0
 
     async def run(self) -> NoReturn:
@@ -350,7 +350,7 @@ class Gate:
         """
         latency = end - start
         self.orderbook_latencies.append(latency)
-        self.orderbooks_rps += 1
+        self.orderbook_rps += 1
 
     async def watch_balance(self):
         while True:
@@ -450,10 +450,10 @@ class Gate:
         Получить целевые метрики
         """
         percentile = latency_percentile(self.orderbook_latencies)
-        orderbooks_rps = self.orderbooks_rps
+        orderbook_rps = self.orderbook_rps
         private_rps = self.private_api_total_rps
 
-        data = EventFormatter.metrics_data(percentile, orderbooks_rps, private_rps)
+        data = EventFormatter.metrics_data(percentile, orderbook_rps, private_rps)
         return data
 
     def reset_metrics(self) -> None:
@@ -461,7 +461,7 @@ class Gate:
         Сбросить данные, по которым считаются метрики
         """
         self.orderbook_latencies = []
-        self.orderbooks_rps = 0
+        self.orderbook_rps = 0
         self.private_api_total_rps = 0
 
     async def close(self):
