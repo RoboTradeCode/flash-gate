@@ -2,15 +2,19 @@ import asyncio
 import json
 import logging
 import uuid
+from time import monotonic_ns
 from typing import NoReturn, Coroutine
 import ccxt.base.errors
 from flash_gate.cache.memcached import Memcached
 from flash_gate.exchange import CcxtExchange, ExchangePool
+from flash_gate.exchange.pool import PrivateExchangePool
 from flash_gate.transmitter import AeronTransmitter
 from flash_gate.transmitter.enums import EventAction, Destination
 from flash_gate.transmitter.types import Event, EventNode, EventType
+from .formatters import EventFormatter
 from .parsers import ConfigParser
-from ..exchange.pool import PrivateExchangePool
+from .statistics import latency_percentile
+from .typing import Metrics
 
 logger = logging.getLogger(__name__)
 lock = asyncio.Lock()
@@ -60,12 +64,15 @@ class Gate:
 
         self.tickers = config_parser.tickers
         self.assets = config_parser.assets
-
-        self.orderbooks_received = 0
         self.open_orders = set()
 
         self.balance_delay = config_parser.balance_delay
         self.orders_delay = config_parser.order_status_delay
+
+        # Метрики
+        self.orderbook_latencies = []
+        self.orderbooks_rps = 0
+        self.private_api_total_rps = 0
 
     async def run(self) -> NoReturn:
         tasks = self.get_periodical_tasks()
@@ -93,6 +100,7 @@ class Gate:
         Возваращет очередной экземпляр из пула или один и тот же экземлпяр, если мульти-аккаунты не используются.
         Позволяет работать с пулом таким образом, как если бы это был атрибут класса.
         """
+        self.private_api_total_rps += 1
         if self._private_exchange_pool is not None:
             return await self._private_exchange_pool.acquire()
         return self._exchange
@@ -309,9 +317,12 @@ class Gate:
         while True:
             try:
                 exchange = await self.exchange_pool.acquire()
-                orderbooks = await exchange.fetch_order_books(self.tickers, 10)
 
-                self.orderbooks_received += len(orderbooks)
+                start = monotonic_ns()
+                orderbooks = await exchange.fetch_order_books(self.tickers, 10)
+                end = monotonic_ns()
+
+                self.save_orderbook_metric(start, end)
 
                 for orderbook in orderbooks:
                     event: Event = {
@@ -332,6 +343,14 @@ class Gate:
                 }
                 self.transmitter.offer(log_event, Destination.CORE)
                 self.transmitter.offer(log_event, Destination.LOGS)
+
+    def save_orderbook_metric(self, start: int, end: int) -> None:
+        """
+        Сохранить целевые метрики для ордербука
+        """
+        latency = end - start
+        self.orderbook_latencies.append(latency)
+        self.orderbooks_rps += 1
 
     async def watch_balance(self):
         while True:
@@ -414,16 +433,36 @@ class Gate:
 
     async def health_check(self) -> NoReturn:
         while True:
-            await self.ping()
+            self.offer_metrics()
             await asyncio.sleep(1)
 
-    async def ping(self):
-        event: Event = {
-            "event_id": str(uuid.uuid4()),
-            "action": EventAction.PING,
-            "data": self.orderbooks_received,
-        }
+    def offer_metrics(self) -> None:
+        """
+        Отправить целевые метрики на сервер логирования и сбросить данные
+        """
+        data = self.get_metrics()
+        event = EventFormatter.metrics(data)
         self.transmitter.offer(event, Destination.LOGS)
+        self.reset_metrics()
+
+    def get_metrics(self) -> Metrics:
+        """
+        Получить целевые метрики
+        """
+        percentile = latency_percentile(self.orderbook_latencies)
+        orderbooks_rps = self.orderbooks_rps
+        private_rps = self.private_api_total_rps
+
+        data = EventFormatter.metrics_data(percentile, orderbooks_rps, private_rps)
+        return data
+
+    def reset_metrics(self) -> None:
+        """
+        Сбросить данные, по которым считаются метрики
+        """
+        self.orderbook_latencies = []
+        self.orderbooks_rps = 0
+        self.private_api_total_rps = 0
 
     async def close(self):
         await self.exchange_pool.close()
