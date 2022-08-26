@@ -433,7 +433,8 @@ class Gate:
 
     async def health_check(self) -> NoReturn:
         while True:
-            self.offer_metrics()
+            if self.orderbook_rps > 0:
+                self.offer_metrics()
             await asyncio.sleep(1)
 
     def offer_metrics(self) -> None:
