@@ -3,6 +3,14 @@ from decimal import Decimal
 from .typing import LatencyPercentile
 
 
+def ns_to_us(ns: int) -> int:
+    """
+    Преобразовать наносекунды в микросекунды
+    """
+    us = int(ns / 1_000)
+    return us
+
+
 def latency_percentile(data: list) -> LatencyPercentile:
     """
     Получить 50, 90, 99 и 99.99 процентили из переданного списка

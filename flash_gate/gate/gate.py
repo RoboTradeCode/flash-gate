@@ -348,7 +348,7 @@ class Gate:
         """
         Сохранить целевые метрики для ордербука
         """
-        latency = end - start
+        latency = ns_to_us(end - start)
         self.orderbook_latencies.append(latency)
         self.orderbook_rps += 1
 
