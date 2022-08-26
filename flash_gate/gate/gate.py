@@ -13,7 +13,7 @@ from flash_gate.transmitter.enums import EventAction, Destination
 from flash_gate.transmitter.types import Event, EventNode, EventType
 from .formatters import EventFormatter
 from .parsers import ConfigParser
-from .statistics import latency_percentile
+from .statistics import latency_percentile, ns_to_us
 from .typing import Metrics
 
 logger = logging.getLogger(__name__)
