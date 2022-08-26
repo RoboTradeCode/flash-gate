@@ -84,7 +84,7 @@ class Gate:
             self.watch_orderbooks(),
             self.watch_balance(),
             self.watch_orders(),
-            self.health_check(),
+            self.metrics(),
         ]
 
     def handler(self, message: str):
@@ -431,7 +431,7 @@ class Gate:
                 await asyncio.sleep(self.orders_delay)
             await asyncio.sleep(0)
 
-    async def health_check(self) -> NoReturn:
+    async def metrics(self) -> NoReturn:
         while True:
             if self.orderbook_rps > 0:
                 self.offer_metrics()
