@@ -182,12 +182,12 @@ class Gate:
             self.transmitter.offer(event, Destination.LOGS)
 
         except Exception as e:
-            logger.exception(e)
+            message = self.describe_exception(e)
             log_event: Event = {
                 "event_id": event_id,
                 "event": EventType.ERROR,
                 "action": EventAction.CREATE_ORDERS,
-                "message": str(e),
+                "message": message,
                 "data": [param],
             }
             self.transmitter.offer(log_event, Destination.CORE)
@@ -238,12 +238,12 @@ class Gate:
             self.transmitter.offer(log_event, Destination.LOGS)
 
         except Exception as e:
-            logger.exception(e)
+            message = self.describe_exception(e)
             log_event: Event = {
                 "event_id": str(uuid.uuid4()),
                 "event": EventType.ERROR,
                 "action": EventAction.CANCEL_ORDERS,
-                "message": str(e),
+                "message": message,
                 "data": [param],
             }
             self.transmitter.offer(log_event, Destination.CORE)
@@ -271,16 +271,29 @@ class Gate:
             self.transmitter.offer(event, Destination.LOGS)
 
         except Exception as e:
-            logger.exception(e)
+            message = self.describe_exception(e)
             log_event: Event = {
                 "event_id": str(uuid.uuid4()),
                 "event": EventType.ERROR,
                 "action": EventAction.GET_ORDERS,
-                "message": str(e),
+                "message": message,
                 "data": [param],
             }
             self.transmitter.offer(log_event, Destination.CORE)
             self.transmitter.offer(log_event, Destination.LOGS)
+
+    @staticmethod
+    def describe_exception(exception: Exception):
+        """
+        Получить небольшое сообщение, описывающее исключение.
+        Логгирует исключение, если оно не относится к ожидаемым.
+        """
+        if isinstance(exception, ccxt.errors.RequestTimeout):
+            message = 'Timeout error'
+        else:
+            logger.exception(exception)
+            message = str(exception)
+        return message
 
     async def get_balance(self, event: Event):
         if not (assets := event.get("data", [])):
@@ -300,12 +313,12 @@ class Gate:
             self.transmitter.offer(event, Destination.LOGS)
 
         except Exception as e:
-            logger.exception(e)
+            message = self.describe_exception(e)
             log_event: Event = {
                 "event_id": event["event_id"],
                 "event": EventType.ERROR,
                 "action": EventAction.GET_BALANCE,
-                "message": str(e),
+                "message": message,
                 "data": assets,
             }
             self.transmitter.offer(log_event, Destination.CORE)
@@ -331,12 +344,12 @@ class Gate:
                     self.transmitter.offer(event, Destination.ORDER_BOOK)
 
             except Exception as e:
-                logger.exception(e)
+                message = self.describe_exception(e)
                 log_event: Event = {
                     "event_id": str(uuid.uuid4()),
                     "event": EventType.ERROR,
                     "action": EventAction.ORDER_BOOK_UPDATE,
-                    "message": str(e),
+                    "message": message,
                     "data": self.tickers,
                 }
                 self.transmitter.offer(log_event, Destination.CORE)
@@ -368,12 +381,12 @@ class Gate:
                 self.transmitter.offer(event, Destination.LOGS)
 
             except Exception as e:
-                logger.exception(e)
+                message = self.describe_exception(e)
                 log_event: Event = {
                     "event_id": str(uuid.uuid4()),
                     "event": EventType.ERROR,
                     "action": EventAction.BALANCE_UPDATE,
-                    "message": str(e),
+                    "message": message,
                     "data": self.assets,
                 }
                 self.transmitter.offer(log_event, Destination.CORE)
@@ -411,12 +424,12 @@ class Gate:
                     self.transmitter.offer(event, Destination.LOGS)
 
                 except Exception as e:
-                    logger.exception(e)
+                    message = self.describe_exception(e)
                     log_event: Event = {
                         "event_id": str(uuid.uuid4()),
                         "event": EventType.ERROR,
                         "action": EventAction.ORDERS_UPDATE,
-                        "message": str(e),
+                        "message": message,
                         "data": [
                             {"client_order_id": client_order_id, "symbol": symbol}
                         ],
