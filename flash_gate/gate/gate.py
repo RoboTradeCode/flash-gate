@@ -290,6 +290,8 @@ class Gate:
         """
         if isinstance(exception, ccxt.errors.RequestTimeout):
             message = 'Timeout error'
+        elif isinstance(exception, ccxt.errors.RateLimitExceeded):
+            message = 'Rate limit exceeded'
         else:
             logger.exception(exception)
             message = str(exception)
