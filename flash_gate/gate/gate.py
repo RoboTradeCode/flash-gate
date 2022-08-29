@@ -69,7 +69,11 @@ class Gate:
         self.orderbook_rps = 0
         self.private_api_total_rps = 0
 
+        # Strong references to tasks
         self.background_tasks = set()
+
+        # References to tasks that are considered priority. Periodic data
+        # will not be requested if the list of priority tasks is not empty
         self.priority_tasks = set()
 
     async def run(self) -> NoReturn:
