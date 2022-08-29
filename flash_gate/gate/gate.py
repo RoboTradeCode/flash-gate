@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import uuid
+from asyncio import ALL_COMPLETED
 from time import monotonic_ns
 from typing import NoReturn, Coroutine
 import ccxt.base.errors
@@ -136,6 +137,8 @@ class Gate:
                 action = asyncio.create_task(asyncio.sleep(0))
 
         task = asyncio.create_task(action)
+
+        # Save reference to result, to avoid task disappearing
         self.background_tasks.add(task)
         task.add_done_callback(self.background_tasks.discard)
 
@@ -365,7 +368,8 @@ class Gate:
     async def watch_balance(self):
         while True:
             try:
-                await asyncio.wait(self.priority_tasks)
+                # Wait for priority commands to complete
+                await asyncio.wait(self.priority_tasks, return_when=ALL_COMPLETED)
 
                 exchange = await self.get_exchange()
                 balance = await exchange.fetch_partial_balance(self.assets)
@@ -398,7 +402,8 @@ class Gate:
                 try:
                     order_id = self.order_id_by_client_order_id.get(client_order_id)
 
-                    await asyncio.wait(self.priority_tasks)
+                    # Wait for priority commands to complete
+                    await asyncio.wait(self.priority_tasks, return_when=ALL_COMPLETED)
 
                     exchange = await self.get_exchange()
                     order = await exchange.fetch_order(
