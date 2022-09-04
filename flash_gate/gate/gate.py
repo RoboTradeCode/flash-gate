@@ -374,6 +374,9 @@ class Gate:
 
                 for order in orders:
                     client_order_id = self.client_order_id_by_order_id.get(order.id)
+                    if client_order_id is None:
+                        continue
+
                     event_id = self.event_id_by_client_order_id.get(client_order_id)
                     order.client_order_id = client_order_id
 
