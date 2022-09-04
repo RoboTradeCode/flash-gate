@@ -103,6 +103,9 @@ class Gate:
         self.transmitter.offer(event, Destination.LOGS)
 
     def create_task(self, event: Event):
+        if not isinstance(event, dict):
+            return
+
         match event.get("action"):
             case EventAction.CREATE_ORDERS:
                 action = self.create_orders(event)
