@@ -1,3 +1,6 @@
+from rock import ExchangeConfig
+
+
 class ConfigParser:
     """
     Класс для получения необходимых шлюзу данных из конфигурации
@@ -32,6 +35,13 @@ class ConfigParser:
             "timeout": gate_config["exchange"]["timeout_ms"],
         }
         return exchange_config
+
+    @property
+    def rock_config(self) -> ExchangeConfig:
+        api_key = self._gate_config["exchange"]["credentials"]["api_key"]
+        api_secret = self._gate_config["exchange"]["credentials"]["secret_key"]
+        config = ExchangeConfig(api_key=api_key, api_secret=api_secret)
+        return config
 
     @property
     def sandbox_mode(self) -> bool:
@@ -127,21 +137,3 @@ class ConfigParser:
     @property
     def public_delay(self) -> float:
         return 0
-
-    @property
-    def private_delay(self) -> float:
-        rps = self.api_requests_per_seconds["private"]["exchange_rps_limit"]
-        private_delay = 1 / rps
-        return private_delay
-
-    @property
-    def balance_delay(self) -> float:
-        rps = self.api_requests_per_seconds["private"]["balance"]
-        balance_delay = 1 / rps
-        return balance_delay
-
-    @property
-    def order_status_delay(self) -> float:
-        rps = self.api_requests_per_seconds["private"]["order_status"]
-        order_status_delay = 1 / rps
-        return order_status_delay

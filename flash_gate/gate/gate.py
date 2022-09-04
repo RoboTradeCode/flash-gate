@@ -16,6 +16,7 @@ from .formatters import EventFormatter
 from .parsers import ConfigParser
 from .statistics import latency_percentile, ns_to_us
 from .typing import Metrics
+from rock import ExchangeFactory, ExchangeName
 
 logger = logging.getLogger(__name__)
 lock = asyncio.Lock()
@@ -30,51 +31,39 @@ class Gate:
         config_parser = ConfigParser(config)
         exchange_id = config_parser.exchange_id
         exchange_config = config_parser.exchange_config
+        rock_name = ExchangeName.EXMO
+        rock_config = config_parser.rock_config
 
+        self.tickers = config_parser.tickers
+        self.assets = config_parser.assets
+
+        # Кеширование
         self.event_id_by_client_order_id = Memcached(key_prefix="event_id")
         self.order_id_by_client_order_id = Memcached(key_prefix="order_id")
-        self.transmitter = AeronTransmitter(self.handler, config)
+        self.client_order_id_by_order_id = Memcached(key_prefix="client_order_id")
 
-        self._exchange = (
-            CcxtExchange(exchange_id, exchange_config)
-            if config_parser.accounts is None
-            else None
+        # Соединения
+        self.rock = ExchangeFactory.create_exchange(rock_name, rock_config)
+        self.private_exchange_pool = PrivateExchangePool(
+            exchange_id=exchange_id,
+            config=exchange_config,
+            accounts=config_parser.accounts,
         )
-        self._private_exchange_pool = (
-            PrivateExchangePool(
-                exchange_id=exchange_id,
-                config=exchange_config,
-                accounts=config_parser.accounts,
-            )
-            if config_parser.accounts is not None
-            else None
-        )
-
         self.exchange_pool = ExchangePool(
             exchange_id,
             config_parser.public_config,
             config_parser.public_ip,
             config_parser.public_delay,
         )
-
-        self.tickers = config_parser.tickers
-        self.assets = config_parser.assets
-        self.open_orders = set()
-
-        self.balance_delay = config_parser.balance_delay
-        self.orders_delay = config_parser.order_status_delay
+        self.transmitter = AeronTransmitter(self.handler, config)
 
         # Метрики
         self.orderbook_latencies = []
         self.orderbook_rps = 0
         self.private_api_total_rps = 0
 
-        # Strong references to tasks
+        # Временное хранение сильных ссылок на задачи
         self.background_tasks = set()
-
-        # References to tasks that are considered priority. Periodic data
-        # will not be requested if the list of priority tasks is not empty
-        self.priority_tasks = set()
 
     async def run(self) -> NoReturn:
         tasks = self.get_periodical_tasks()
@@ -97,14 +86,9 @@ class Gate:
     async def get_exchange(self):
         """
         Получить экземпляр биржи
-
-        Возваращет очередной экземпляр из пула или один и тот же экземлпяр, если мульти-аккаунты не используются.
-        Позволяет работать с пулом таким образом, как если бы это был атрибут класса.
         """
         self.private_api_total_rps += 1
-        if self._private_exchange_pool is not None:
-            return await self._private_exchange_pool.acquire()
-        return self._exchange
+        return await self.private_exchange_pool.acquire()
 
     def deserialize_message(self, message: str) -> Event:
         try:
@@ -120,17 +104,12 @@ class Gate:
         self.transmitter.offer(event, Destination.LOGS)
 
     def create_task(self, event: Event):
-        priority_task = False
-
         match event.get("action"):
             case EventAction.CREATE_ORDERS:
-                priority_task = True
                 action = self.create_orders(event)
             case EventAction.CANCEL_ORDERS:
-                priority_task = True
                 action = self.cancel_orders(event)
             case EventAction.CANCEL_ALL_ORDERS:
-                priority_task = True
                 action = self.cancel_all_orders()
             case EventAction.GET_ORDERS:
                 action = self.get_orders(event)
@@ -145,10 +124,6 @@ class Gate:
         # Save reference to result, to avoid task disappearing
         self.background_tasks.add(task)
         task.add_done_callback(self.background_tasks.discard)
-
-        if priority_task:
-            self.priority_tasks.add(task)
-            task.add_done_callback(self.priority_tasks.discard)
 
     async def create_orders(self, event: Event):
         for param in event.get("data", []):
@@ -178,7 +153,7 @@ class Gate:
             order["client_order_id"] = param["client_order_id"]
             self.event_id_by_client_order_id.set(order["client_order_id"], event_id)
             self.order_id_by_client_order_id.set(order["client_order_id"], order["id"])
-            self.open_orders.add((order["client_order_id"], order["symbol"]))
+            self.client_order_id_by_order_id.set(order["id"], order["client_order_id"])
 
             event: Event = {
                 "event_id": event_id,
@@ -372,12 +347,7 @@ class Gate:
     async def watch_balance(self):
         while True:
             try:
-                # Wait for priority commands to complete
-                if self.priority_tasks:
-                    await asyncio.wait(self.priority_tasks, return_when=ALL_COMPLETED)
-
-                exchange = await self.get_exchange()
-                balance = await exchange.fetch_partial_balance(self.assets)
+                balance = await self.rock.watch_balance()
 
                 event: Event = {
                     "event_id": str(uuid.uuid4()),
@@ -394,60 +364,38 @@ class Gate:
                     "event": EventType.ERROR,
                     "action": EventAction.BALANCE_UPDATE,
                     "message": message,
-                    "data": self.assets,
                 }
                 self.transmitter.offer(log_event, Destination.CORE)
                 self.transmitter.offer(log_event, Destination.LOGS)
 
-            await asyncio.sleep(self.balance_delay)
-
     async def watch_orders(self):
         while True:
-            for client_order_id, symbol in self.open_orders.copy():
-                try:
-                    order_id = self.order_id_by_client_order_id.get(client_order_id)
+            try:
+                orders = await self.rock.watch_orders()
 
-                    # Wait for priority commands to complete
-                    await asyncio.wait(self.priority_tasks, return_when=ALL_COMPLETED)
-
-                    exchange = await self.get_exchange()
-                    order = await exchange.fetch_order(
-                        {"id": order_id, "symbol": symbol}
-                    )
-
-                    order["client_order_id"] = client_order_id
-
-                    if order["status"] != "open":
-                        self.open_orders.discard((client_order_id, symbol))
+                for order in orders:
+                    client_order_id = self.client_order_id_by_order_id.get(order.id)
+                    event_id = self.event_id_by_client_order_id.get(client_order_id)
+                    order.client_order_id = client_order_id
 
                     event: Event = {
-                        "event_id": self.event_id_by_client_order_id.get(
-                            order["client_order_id"]
-                        ),
+                        "event_id": event_id,
                         "action": EventAction.ORDERS_UPDATE,
                         "data": [order],
                     }
                     self.transmitter.offer(event, Destination.CORE)
                     self.transmitter.offer(event, Destination.LOGS)
 
-                except Exception as e:
-                    message = self.describe_exception(e)
-                    log_event: Event = {
-                        "event_id": str(uuid.uuid4()),
-                        "event": EventType.ERROR,
-                        "action": EventAction.ORDERS_UPDATE,
-                        "message": message,
-                        "data": [
-                            {"client_order_id": client_order_id, "symbol": symbol}
-                        ],
-                    }
-                    self.transmitter.offer(log_event, Destination.CORE)
-                    self.transmitter.offer(log_event, Destination.LOGS)
-                    self.open_orders.discard((client_order_id, symbol))
-
-                logger.info("Open orders: %s", len(self.open_orders))
-                await asyncio.sleep(self.orders_delay)
-            await asyncio.sleep(0)
+            except Exception as e:
+                message = self.describe_exception(e)
+                log_event: Event = {
+                    "event_id": str(uuid.uuid4()),
+                    "event": EventType.ERROR,
+                    "action": EventAction.ORDERS_UPDATE,
+                    "message": message,
+                }
+                self.transmitter.offer(log_event, Destination.CORE)
+                self.transmitter.offer(log_event, Destination.LOGS)
 
     async def metrics(self) -> NoReturn:
         while True:
@@ -488,6 +436,7 @@ class Gate:
         self.transmitter.close()
 
     async def __aenter__(self):
+        await self.rock.init()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
