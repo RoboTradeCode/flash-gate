@@ -2,12 +2,11 @@ import asyncio
 import json
 import logging
 import uuid
-from asyncio import ALL_COMPLETED
 from time import monotonic_ns
 from typing import NoReturn, Coroutine
 import ccxt.base.errors
 from flash_gate.cache.memcached import Memcached
-from flash_gate.exchange import CcxtExchange, ExchangePool
+from flash_gate.exchange import ExchangePool
 from flash_gate.exchange.pool import PrivateExchangePool
 from flash_gate.transmitter import AeronTransmitter
 from flash_gate.transmitter.enums import EventAction, Destination
