@@ -114,6 +114,15 @@ class Gate:
             return event
         except Exception as e:
             logger.error("Message deserialize error: %s", e)
+            log_event: Event = {
+                "event_id": str(uuid.uuid4()),
+                "event": EventType.ERROR,
+                "action": None,
+                "message": f"Message deserialize error: {e}",
+                "data": [message],
+            }
+            self.transmitter.offer(log_event, Destination.CORE)
+            self.transmitter.offer(log_event, Destination.LOGS)
 
     def log(self, event: Event):
         event = event.copy()
@@ -139,6 +148,15 @@ class Gate:
                 action = self.get_balance(event)
             case _:
                 logger.error("Unsupported action: %s", event.get("action"))
+                log_event: Event = {
+                    "event_id": str(uuid.uuid4()),
+                    "event": EventType.ERROR,
+                    "action": None,
+                    "message": f"Unsupported action: {event.get('action')}",
+                    "data": [event],
+                }
+                self.transmitter.offer(log_event, Destination.CORE)
+                self.transmitter.offer(log_event, Destination.LOGS)
                 action = asyncio.sleep(0)
 
         task = asyncio.create_task(action)
