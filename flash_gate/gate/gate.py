@@ -92,7 +92,8 @@ class Gate:
     def handler(self, message: str):
         logger.debug("Message: %s", message)
         event = self.deserialize_message(message)
-        self.create_task(event)
+        if event is not None:
+            self.create_task(event)
 
     async def get_exchange(self):
         """
@@ -106,13 +107,22 @@ class Gate:
             return await self._private_exchange_pool.acquire()
         return self._exchange
 
-    def deserialize_message(self, message: str) -> Event:
+    def deserialize_message(self, message: str) -> Event | None:
         try:
             event = json.loads(message)
             self.log(event)
             return event
         except Exception as e:
             logger.error("Message deserialize error: %s", e)
+            log_event: Event = {
+                "event_id": str(uuid.uuid4()),
+                "event": EventType.ERROR,
+                "action": None,
+                "message": f"Message deserialize error: {e}",
+                "data": [message],
+            }
+            self.transmitter.offer(log_event, Destination.CORE)
+            self.transmitter.offer(log_event, Destination.LOGS)
 
     def log(self, event: Event):
         event = event.copy()
@@ -138,7 +148,16 @@ class Gate:
                 action = self.get_balance(event)
             case _:
                 logger.error("Unsupported action: %s", event.get("action"))
-                action = asyncio.create_task(asyncio.sleep(0))
+                log_event: Event = {
+                    "event_id": str(uuid.uuid4()),
+                    "event": EventType.ERROR,
+                    "action": None,
+                    "message": f"Unsupported action: {event.get('action')}",
+                    "data": [event],
+                }
+                self.transmitter.offer(log_event, Destination.CORE)
+                self.transmitter.offer(log_event, Destination.LOGS)
+                action = asyncio.sleep(0)
 
         task = asyncio.create_task(action)
 
