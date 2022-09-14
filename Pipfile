@@ -10,7 +10,7 @@ aiohttp = "*"
 ccxtpro = {subdirectory = "python", git = "ssh://git@github.com/RoboTradeCode/ccxt.pro.git"}
 pymemcache = "*"
 pyyaml = "*"
-rock = {git = "ssh://git@github.com/RoboTradeCode/rock.git"}
+rock = {ref = "v0.0.2", git = "ssh://git@github.com/RoboTradeCode/rock.git"}
 
 [requires]
 python_version = "3.10"
