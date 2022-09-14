@@ -1,7 +1,23 @@
+import dataclasses
 import json
 from datetime import datetime
-from .types import Event
+from decimal import Decimal
 from .enums import EventType
+from .types import Event
+
+
+class RoboTradeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if dataclasses.is_dataclass(obj):
+            representation = dataclasses.asdict(obj)
+        elif isinstance(obj, Decimal):
+            representation = str(obj.normalize())
+        elif isinstance(obj, datetime):
+            representation = int(obj.timestamp() * 1000)
+        else:
+            representation = json.JSONEncoder.default(self, obj)
+
+        return representation
 
 
 class JsonFormatter:
@@ -45,4 +61,4 @@ class JsonFormatter:
 
     @staticmethod
     def _serialize(message: dict) -> str:
-        return json.dumps(message)
+        return json.dumps(message, cls=RoboTradeEncoder)

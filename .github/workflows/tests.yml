@@ -24,6 +24,7 @@ jobs:
         ssh-private-key: |
           ${{ secrets.AERON_PYTHON_DEPLOY_KEY }}
           ${{ secrets.CCXTPRO_DEPLOY_KEY }}
+          ${{ secrets.ROCK_DEPLOY_KEY }}
 
     - name: Set up Python 3.10
       uses: actions/setup-python@v3
