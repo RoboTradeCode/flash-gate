@@ -1,5 +1,5 @@
 import asyncio
-from time import time_ns, sleep
+from time import time_ns
 import itertools
 import logging
 from abc import ABC, abstractmethod
@@ -111,10 +111,20 @@ class CcxtExchange(Exchange):
     def __init__(self, exchange_id: str, config: dict):
         self.logger = logging.getLogger(__name__)
         self.exchange: ccxtpro.Exchange = getattr(ccxtpro, exchange_id)(config)
+
+        # Функция для получения nonce — уникального числа для каждой команды.
+        # По умолчанию функция возвращает временную метку в миллисекундах
+        # Но гейт выставляет ордера чаще. И требуется более точная временная метка
         self.exchange.nonce = self.nonce
 
     @staticmethod
     def nonce():
+        """
+        Получить nonce
+
+        Nonce представляет собой числовое значение (>0), которое никогда не должно
+        повторяться или уменьшаться. Используется при получении подписи для сообщения
+        """
         return time_ns()
 
     async def fetch_order_book(self, symbol: str, limit: int) -> OrderBook:
