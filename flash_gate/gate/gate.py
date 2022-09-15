@@ -5,6 +5,8 @@ import uuid
 from time import monotonic_ns
 from typing import NoReturn, Coroutine
 import ccxt.base.errors
+from rock import ExchangeFactory, ExchangeName
+from rock.exchanges.dataclasses import Balance
 from flash_gate.cache.memcached import Memcached
 from flash_gate.exchange import ExchangePool
 from flash_gate.exchange.pool import PrivateExchangePool
@@ -15,7 +17,6 @@ from .formatters import EventFormatter
 from .parsers import ConfigParser
 from .statistics import latency_percentile, ns_to_us
 from .typing import Metrics
-from rock import ExchangeFactory, ExchangeName
 
 logger = logging.getLogger(__name__)
 lock = asyncio.Lock()
@@ -368,7 +369,8 @@ class Gate:
     async def watch_balance(self):
         while True:
             try:
-                balance = await self.rock.watch_balance()
+                full_balance = await self.rock.watch_balance()
+                balance = self.filter_balance(full_balance)
 
                 event: Event = {
                     "event_id": str(uuid.uuid4()),
@@ -388,6 +390,14 @@ class Gate:
                 }
                 self.transmitter.offer(log_event, Destination.CORE)
                 self.transmitter.offer(log_event, Destination.LOGS)
+
+    def filter_balance(self, balance: Balance) -> Balance:
+        """
+        Отфильтровать баланс по необходимым символам
+        """
+        assets = {k: v for k, v in balance.assets.items() if k in self.assets}
+        balance.assets = assets
+        return balance
 
     async def watch_orders(self):
         while True:
