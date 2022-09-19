@@ -5,8 +5,11 @@ import uuid
 from time import monotonic_ns
 from typing import NoReturn, Coroutine
 import ccxt.base.errors
+from cachetools import LRUCache
 from rock import ExchangeFactory, ExchangeName
 from rock.exchanges.dataclasses import Balance
+from rock.exchanges.enum import OrderStatus
+
 from flash_gate.cache.memcached import Memcached
 from flash_gate.exchange import ExchangePool
 from flash_gate.exchange.pool import PrivateExchangePool
@@ -41,6 +44,7 @@ class Gate:
         self.event_id_by_client_order_id = Memcached(key_prefix="event_id")
         self.order_id_by_client_order_id = Memcached(key_prefix="order_id")
         self.client_order_id_by_order_id = Memcached(key_prefix="client_order_id")
+        self.canceled_orders = LRUCache(10000)
 
         # Соединения
         self.rock = ExchangeFactory.create_exchange(rock_name, rock_config)
@@ -204,6 +208,7 @@ class Gate:
         try:
             exchange = await self.get_exchange()
             await exchange.cancel_order({"id": order_id, "symbol": symbol})
+            self.canceled_orders[order_id] = True
 
         except ccxt.base.errors.OrderNotFound as e:
             event: Event = {
@@ -411,6 +416,9 @@ class Gate:
 
                     event_id = self.event_id_by_client_order_id.get(client_order_id)
                     order.client_order_id = client_order_id
+
+                    if self.canceled_orders.get(order.id, False):
+                        order.status = OrderStatus.CANCELED
 
                     event: Event = {
                         "event_id": event_id,
