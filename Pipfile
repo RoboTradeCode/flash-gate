@@ -7,11 +7,11 @@ name = "pypi"
 aeron = {git = "ssh://git@github.com/RoboTradeCode/aeron-python.git"}
 aiofiles = "*"
 aiohttp = "*"
+cachetools = "*"
 ccxtpro = {subdirectory = "python", git = "ssh://git@github.com/RoboTradeCode/ccxt.pro.git"}
 pymemcache = "*"
 pyyaml = "*"
-rock = {ref = "v0.0.2", git = "ssh://git@github.com/RoboTradeCode/rock.git"}
-cachetools = "*"
+rock = {ref = "v0.0.3", git = "ssh://git@github.com/RoboTradeCode/rock.git"}
 
 [requires]
 python_version = "3.10"
