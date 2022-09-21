@@ -13,7 +13,7 @@ class RoboTradeEncoder(json.JSONEncoder):
         elif isinstance(obj, Decimal):
             representation = str(obj.normalize())
         elif isinstance(obj, datetime):
-            representation = int(obj.timestamp() * 1000)
+            representation = int(obj.timestamp() * 1_000_000)
         else:
             representation = json.JSONEncoder.default(self, obj)
 
