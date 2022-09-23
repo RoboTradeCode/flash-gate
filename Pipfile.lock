@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "fe8447dbf09beb55fc4a3c481578fb076a624637cadd5683677694e3b9673761"
+            "sha256": "977dd0d5ac00ed6029fbb452763d15631069c826b2e83a12bdd09c8dc5943955"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -162,9 +162,10 @@
         },
         "ccxt": {
             "hashes": [
-                "sha256:b1543d1a8b34264bbd172a9acbea1d7d3c9dee255a40c097aeaec18c98fd6131"
+                "sha256:a0614459f1512ac7ee749704e98e2c663d3bfea0aabc0a67793004e68a7eba93",
+                "sha256:a39969f7363509359d2431c75fd0182ebdb004292b38c069cf8d1000213baf96"
             ],
-            "version": "==1.93.87"
+            "version": "==1.93.88"
         },
         "ccxtpro": {
             "git": "ssh://git@github.com/RoboTradeCode/ccxt.pro.git",
@@ -546,12 +547,12 @@
                 "sha256:7c5599b102feddaa661c826c56ab4fee28bfd17f5abca1ebbe3e7f19d7c97983",
                 "sha256:8fefa2a1a1365bf5520aac41836fbee479da67864514bdb821f31ce07ce65349"
             ],
-            "markers": "python_version >= '3.7' and python_version < '4'",
+            "markers": "python_version >= '3.7' and python_version < '4.0'",
             "version": "==2.28.1"
         },
         "rock": {
             "git": "ssh://git@github.com/RoboTradeCode/rock.git",
-            "ref": "7c7d0231fdd499591d011b67d23f123ba93138d9"
+            "ref": "02ae97a2a369c34bdab3154e8ca0ff4f83fce662"
         },
         "setuptools": {
             "hashes": [
@@ -566,7 +567,7 @@
                 "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926",
                 "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"
             ],
-            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2'",
+            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'",
             "version": "==1.16.0"
         },
         "urllib3": {
@@ -574,7 +575,7 @@
                 "sha256:3fa96cf423e6987997fc326ae8df396db2a8b7c667747d47ddd8ecba91f4a74e",
                 "sha256:b930dd878d5a8afb066a637fbb35144fe7901e3b209d1cd4f524bd0e9deee997"
             ],
-            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4, 3.5' and python_version < '4'",
+            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4, 3.5' and python_version < '4.0'",
             "version": "==1.26.12"
         },
         "websockets": {
